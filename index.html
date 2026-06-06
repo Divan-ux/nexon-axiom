@@ -1,0 +1,2182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXON Axiom — Infinite Math Whiteboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&family=Playfair+Display:ital@0;1&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg-void:#030303;
+  --glass-surface:rgba(18,18,18,0.92);
+  --glass-border:rgba(212,175,55,0.15);
+  --gold-pure:#D4AF37;
+  --gold-dim:#8a6e1a;
+  --ink-white:#FFFFFF;
+  --ink-gray:#888888;
+  --ink-emerald:#22C55E;
+  --ink-crimson:#EF4444;
+  --ink-blue:#60a5fa;
+  --ink-purple:#a78bfa;
+  --panel-width:64px;
+  --toolbar-h:52px;
+  --font-ui:'Space Grotesk',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-void);font-family:var(--font-ui);}
+#app{width:100vw;height:100vh;position:relative;overflow:hidden;}
+
+/* ── Canvas ── */
+#mainCanvas{display:block;position:absolute;inset:0;cursor:crosshair;touch-action:none;}
+#gridCanvas{display:block;position:absolute;inset:0;pointer-events:none;}
+
+/* ── Toolbar ── */
+#toolbar{
+  position:absolute;top:0;left:0;right:0;height:var(--toolbar-h);
+  background:var(--glass-surface);
+  border-bottom:0.5px solid var(--glass-border);
+  backdrop-filter:blur(20px);
+  display:flex;align-items:center;gap:0;
+  z-index:100;user-select:none;
+}
+.tb-brand{
+  padding:0 20px;font-size:13px;font-weight:600;letter-spacing:0.12em;
+  color:var(--gold-pure);text-transform:uppercase;white-space:nowrap;
+  border-right:0.5px solid var(--glass-border);height:100%;display:flex;align-items:center;
+  font-family:var(--font-mono);
+}
+.tb-brand span{color:rgba(255,255,255,0.3);font-weight:300;}
+.tb-section{display:flex;align-items:center;gap:2px;padding:0 12px;height:100%;border-right:0.5px solid var(--glass-border);}
+.tb-btn{
+  width:34px;height:34px;border-radius:6px;border:none;background:transparent;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  color:var(--ink-gray);transition:all 0.15s;position:relative;
+}
+.tb-btn:hover{background:rgba(212,175,55,0.08);color:var(--ink-white);}
+.tb-btn.active{background:rgba(212,175,55,0.15);color:var(--gold-pure);}
+.tb-btn svg{width:16px;height:16px;stroke-width:1.5;}
+.tb-sep{width:0.5px;height:20px;background:var(--glass-border);margin:0 4px;}
+.tb-coords{
+  margin-left:auto;padding:0 16px;
+  font-family:var(--font-mono);font-size:11px;color:var(--ink-gray);
+  display:flex;gap:16px;
+}
+.tb-coords span{color:var(--gold-pure);}
+
+/* ── Left Panel ── */
+#leftPanel{
+  position:absolute;top:var(--toolbar-h);left:0;bottom:0;
+  width:var(--panel-width);
+  background:var(--glass-surface);
+  border-right:0.5px solid var(--glass-border);
+  display:flex;flex-direction:column;align-items:center;
+  padding:12px 0;gap:4px;
+  z-index:90;backdrop-filter:blur(20px);
+}
+.tool-btn{
+  width:44px;height:44px;border-radius:8px;border:0.5px solid transparent;
+  background:transparent;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--ink-gray);transition:all 0.15s;flex-direction:column;gap:2px;
+  position:relative;
+}
+.tool-btn:hover{background:rgba(212,175,55,0.08);color:var(--ink-white);border-color:var(--glass-border);}
+.tool-btn.active{background:rgba(212,175,55,0.12);color:var(--gold-pure);border-color:rgba(212,175,55,0.3);}
+.tool-btn svg{width:18px;height:18px;stroke-width:1.5;}
+.tool-lbl{font-size:8px;font-family:var(--font-mono);letter-spacing:0.05em;text-transform:uppercase;}
+.panel-sep{width:36px;height:0.5px;background:var(--glass-border);margin:4px 0;}
+
+/* ── Right Properties Panel ── */
+#rightPanel{
+  position:absolute;top:var(--toolbar-h);right:0;bottom:0;
+  width:220px;
+  background:var(--glass-surface);
+  border-left:0.5px solid var(--glass-border);
+  backdrop-filter:blur(20px);
+  z-index:90;display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform 0.25s cubic-bezier(.4,0,.2,1);
+  overflow:hidden;
+}
+#rightPanel.open{transform:translateX(0);}
+.rp-header{
+  padding:14px 16px 10px;border-bottom:0.5px solid var(--glass-border);
+  font-size:10px;font-family:var(--font-mono);letter-spacing:0.12em;
+  color:var(--gold-pure);text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;
+}
+.rp-close{background:none;border:none;cursor:pointer;color:var(--ink-gray);padding:2px;}
+.rp-close:hover{color:var(--ink-white);}
+.rp-body{padding:12px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
+.rp-group{display:flex;flex-direction:column;gap:6px;}
+.rp-label{font-size:10px;font-family:var(--font-mono);color:var(--ink-gray);text-transform:uppercase;letter-spacing:0.08em;}
+.rp-row{display:flex;gap:6px;align-items:center;}
+.color-swatch{
+  width:26px;height:26px;border-radius:4px;border:0.5px solid var(--glass-border);
+  cursor:pointer;transition:border-color 0.15s;
+}
+.color-swatch.active{border-color:var(--gold-pure);}
+.rp-slider{width:100%;accent-color:var(--gold-pure);cursor:pointer;}
+.rp-number{
+  width:60px;background:rgba(255,255,255,0.04);border:0.5px solid var(--glass-border);
+  border-radius:4px;padding:4px 6px;color:var(--ink-white);font-family:var(--font-mono);
+  font-size:11px;text-align:center;outline:none;
+}
+.rp-number:focus{border-color:rgba(212,175,55,0.4);}
+.rp-btn{
+  flex:1;padding:6px;border-radius:5px;border:0.5px solid var(--glass-border);
+  background:transparent;color:var(--ink-gray);font-size:10px;font-family:var(--font-mono);
+  cursor:pointer;text-transform:uppercase;letter-spacing:0.06em;transition:all 0.15s;
+}
+.rp-btn:hover{background:rgba(212,175,55,0.08);color:var(--ink-white);}
+.rp-btn.primary{border-color:rgba(212,175,55,0.4);color:var(--gold-pure);}
+.rp-btn.primary:hover{background:rgba(212,175,55,0.12);}
+
+/* ── Equation Panel ── */
+#eqPanel{
+  position:absolute;bottom:24px;left:50%;transform:translateX(-50%);
+  background:var(--glass-surface);border:0.5px solid var(--glass-border);
+  border-radius:12px;backdrop-filter:blur(24px);
+  padding:12px 16px;display:flex;gap:10px;align-items:center;
+  z-index:95;min-width:360px;
+  display:none;
+}
+#eqPanel.open{display:flex;}
+#eqInput{
+  flex:1;background:rgba(255,255,255,0.05);border:0.5px solid var(--glass-border);
+  border-radius:6px;padding:8px 12px;color:var(--ink-white);font-family:var(--font-mono);
+  font-size:13px;outline:none;
+}
+#eqInput:focus{border-color:rgba(212,175,55,0.4);}
+#eqInput::placeholder{color:var(--ink-gray);}
+.eq-plot-btn{
+  padding:8px 16px;border-radius:6px;background:rgba(212,175,55,0.15);
+  border:0.5px solid rgba(212,175,55,0.4);color:var(--gold-pure);
+  font-family:var(--font-mono);font-size:11px;cursor:pointer;
+  text-transform:uppercase;letter-spacing:0.08em;transition:all 0.15s;white-space:nowrap;
+}
+.eq-plot-btn:hover{background:rgba(212,175,55,0.25);}
+.eq-close-btn{background:none;border:none;cursor:pointer;color:var(--ink-gray);padding:4px;}
+.eq-close-btn:hover{color:var(--ink-white);}
+
+/* ── Instrument Overlays ── */
+#rulerOverlay,#compassOverlay,#protractorOverlay{
+  position:absolute;pointer-events:none;z-index:80;
+  top:0;left:0;
+  right:0;bottom:0;
+}
+.ruler-svg,.compass-svg,.protractor-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;}
+
+/* ── HUD / status ── */
+#hud{
+  position:absolute;bottom:16px;right:16px;
+  display:flex;flex-direction:column;gap:4px;align-items:flex-end;
+  pointer-events:none;z-index:95;
+}
+.hud-badge{
+  background:var(--glass-surface);border:0.5px solid var(--glass-border);
+  border-radius:4px;padding:3px 8px;font-family:var(--font-mono);font-size:10px;
+  color:var(--ink-gray);backdrop-filter:blur(16px);
+}
+.hud-badge b{color:var(--gold-pure);font-weight:500;}
+
+/* ── Eraser Cursor ── */
+#eraserCursor{
+  position:absolute;pointer-events:none;z-index:150;
+  border-radius:50%;border:1.5px solid rgba(212,175,55,0.7);
+  background:rgba(212,175,55,0.05);
+  display:none;transform:translate(-50%,-50%);
+  transition:width 0.1s,height 0.1s;
+}
+#zoomCtrl{
+  position:absolute;bottom:16px;left:calc(var(--panel-width) + 12px);
+  display:flex;gap:4px;z-index:95;
+}
+.zoom-btn{
+  width:30px;height:30px;background:var(--glass-surface);border:0.5px solid var(--glass-border);
+  border-radius:5px;color:var(--ink-gray);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+  transition:all 0.15s;backdrop-filter:blur(16px);
+}
+.zoom-btn:hover{color:var(--gold-pure);border-color:rgba(212,175,55,0.3);}
+
+/* ── Tooltip ── */
+#tooltip{
+  position:absolute;background:var(--glass-surface);border:0.5px solid var(--glass-border);
+  border-radius:5px;padding:4px 8px;font-family:var(--font-mono);font-size:10px;
+  color:var(--gold-pure);pointer-events:none;z-index:200;display:none;backdrop-filter:blur(12px);
+}
+
+/* ── Compass Info ── */
+#compassInfo{
+  position:absolute;top:calc(var(--toolbar-h)+12px);left:calc(var(--panel-width)+12px);
+  background:var(--glass-surface);border:0.5px solid var(--glass-border);
+  border-radius:6px;padding:6px 12px;font-family:var(--font-mono);font-size:11px;
+  color:var(--ink-white);z-index:95;display:none;backdrop-filter:blur(12px);
+}
+#compassInfo span{color:var(--gold-pure);}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--glass-border);border-radius:2px;}
+
+/* ── Home / Hotel Panel ── */
+#homePanel{
+  position:absolute;bottom:58px;left:50%;transform:translateX(-50%);
+  display:flex;gap:6px;align-items:center;z-index:96;
+  background:var(--glass-surface);border:0.5px solid var(--glass-border);
+  border-radius:10px;padding:6px 10px;backdrop-filter:blur(20px);
+}
+#homePanel.picking-home{
+  border-color:rgba(212,175,55,0.7);
+  box-shadow:0 0 12px rgba(212,175,55,0.2);
+}
+.home-btn{
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:5px 10px;border-radius:6px;border:0.5px solid transparent;
+  background:transparent;cursor:pointer;color:var(--ink-gray);
+  font-family:var(--font-mono);font-size:9px;letter-spacing:0.06em;
+  text-transform:uppercase;transition:all 0.15s;
+}
+.home-btn svg{width:15px;height:15px;stroke-width:1.5;}
+.home-btn:hover{background:rgba(212,175,55,0.08);color:var(--ink-white);border-color:var(--glass-border);}
+.home-btn.active{background:rgba(212,175,55,0.15);color:var(--gold-pure);border-color:rgba(212,175,55,0.35);}
+.home-btn.set{color:var(--ink-emerald);border-color:rgba(34,197,94,0.3);}
+.home-btn.hotel-on{color:#f97316;border-color:rgba(249,115,22,0.4);background:rgba(249,115,22,0.08);}
+.home-sep{width:0.5px;height:28px;background:var(--glass-border);}
+#homePickMsg{
+  position:absolute;top:calc(var(--toolbar-h)+12px);left:50%;transform:translateX(-50%);
+  background:rgba(212,175,55,0.15);border:0.5px solid rgba(212,175,55,0.5);
+  border-radius:8px;padding:8px 18px;font-family:var(--font-mono);font-size:11px;
+  color:var(--gold-pure);letter-spacing:0.08em;text-transform:uppercase;
+  z-index:200;pointer-events:none;display:none;backdrop-filter:blur(16px);
+  animation:pulse-gold 1.2s ease-in-out infinite;
+}
+@keyframes pulse-gold{0%,100%{box-shadow:0 0 8px rgba(212,175,55,0.3);}50%{box-shadow:0 0 20px rgba(212,175,55,0.6);}}
+
+
+/* Hotel beacon — subtle crosshair, stays out of the way */
+#hotelBeacon{
+  position:absolute;pointer-events:none;z-index:97;display:none;
+  width:8px;height:8px;
+  transform:translate(-50%,-50%);
+}
+#hotelBeacon::before,#hotelBeacon::after{
+  content:'';position:absolute;background:rgba(249,115,22,0.55);
+}
+#hotelBeacon::before{width:1px;height:8px;left:50%;top:0;transform:translateX(-50%);}
+#hotelBeacon::after{width:8px;height:1px;top:50%;left:0;transform:translateY(-50%);}
+/* Home beacon dot */
+#homeBeacon{
+  position:absolute;pointer-events:none;z-index:97;display:none;
+  width:14px;height:14px;border-radius:50%;
+  background:rgba(34,197,94,0.9);border:2px solid #fff;
+  transform:translate(-50%,-50%);
+  box-shadow:0 0 0 0 rgba(34,197,94,0.6);
+  animation:home-pulse 2s ease-out infinite;
+}
+@keyframes home-pulse{
+  0%{box-shadow:0 0 0 0 rgba(34,197,94,0.6);}
+  70%{box-shadow:0 0 0 10px rgba(34,197,94,0);}
+  100%{box-shadow:0 0 0 0 rgba(34,197,94,0);}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Grid canvas (background) -->
+  <canvas id="gridCanvas"></canvas>
+  <!-- Main drawing canvas -->
+  <canvas id="mainCanvas"></canvas>
+
+  <!-- Instrument SVG overlays -->
+  <div id="rulerOverlay"><svg class="ruler-svg" id="rulerSvg"></svg></div>
+  <div id="compassOverlay"><svg class="compass-svg" id="compassSvg"></svg></div>
+  <div id="protractorOverlay"><svg class="protractor-svg" id="protractorSvg"></svg></div>
+
+  <!-- Top toolbar -->
+  <div id="toolbar">
+    <div class="tb-brand">NEXON<span>&nbsp;/&nbsp;</span>AXIOM</div>
+    <!-- File ops -->
+    <div class="tb-section">
+      <button class="tb-btn" id="btn-new" title="New Canvas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+      </button>
+      <button class="tb-btn" id="btn-save" title="Save .nxm — Nexon Math file (preserves everything)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>
+      </button>
+      <button class="tb-btn" id="btn-open" title="Open .nxm file">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      </button>
+      <input type="file" id="openFileInput" accept=".nxm" style="display:none"/>
+      <button class="tb-btn" id="btn-export-svg" title="Export SVG">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+      <button class="tb-btn" id="btn-export-png" title="Export PNG (full content, high-res)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+      </button>
+      <button class="tb-btn" id="btn-export-pdf" title="Export PDF (print-ready)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="9" y1="15" x2="15" y2="15"/><line x1="9" y1="18" x2="12" y2="18"/><path d="M9 11h1a2 2 0 0 1 0 4H9z"/></svg>
+      </button>
+    </div>
+    <!-- Edit ops -->
+    <div class="tb-section">
+      <button class="tb-btn" id="btn-undo" title="Undo (Ctrl+Z)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="1,4 1,10 7,10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+      </button>
+      <button class="tb-btn" id="btn-redo" title="Redo (Ctrl+Y)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23,4 23,10 17,10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      </button>
+      <button class="tb-btn" id="btn-clear" title="Clear Canvas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      </button>
+    </div>
+    <!-- View -->
+    <div class="tb-section">
+      <button class="tb-btn" id="btn-grid" title="Toggle Grid" class="active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      </button>
+      <button class="tb-btn" id="btn-snap" title="Toggle Snap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M19.07 4.93l-2.83 2.83M7.76 16.24l-2.83 2.83"/></svg>
+      </button>
+      <button class="tb-btn" id="btn-axes" title="Insert Axes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><polyline points="18,8 22,12 18,16"/><polyline points="8,2 12,6 16,2"/></svg>
+      </button>
+    </div>
+    <!-- Equation plotter -->
+    <div class="tb-section">
+      <button class="tb-btn" id="btn-eq" title="Equation Plotter">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+      </button>
+      <button class="tb-btn" id="btn-props" title="Properties Panel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="tb-coords">
+      X: <span id="coord-x">0</span> &nbsp; Y: <span id="coord-y">0</span> &nbsp; Zoom: <span id="coord-z">100</span>%
+    </div>
+  </div>
+
+  <!-- Left tool panel -->
+  <div id="leftPanel">
+    <button class="tool-btn active" data-tool="pen" title="Pen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18" stroke-width="1.5"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+      <span class="tool-lbl">Pen</span>
+    </button>
+    <button class="tool-btn" data-tool="eraser" title="Eraser">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18" stroke-width="1.5"><path d="M20 20H7L3 16l11-11 6 6-1 2 1 7z"/><path d="M6.0001 17.9999l5-5"/></svg>
+      <span class="tool-lbl">Erase</span>
+    </button>
+    <button class="tool-btn" data-tool="line" title="Line">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18" stroke-width="1.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="15,8 19,12 15,16"/></svg>
+      <span class="tool-lbl">Line</span>
+    </button>
+    <button class="tool-btn" data-tool="rect" title="Rectangle">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+      <span class="tool-lbl">Rect</span>
+    </button>
+    <button class="tool-btn" data-tool="circle" title="Circle">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18" stroke-width="1.5"><circle cx="12" cy="12" r="9"/></svg>
+      <span class="tool-lbl">Circle</span>
+    </button>
+    <button class="tool-btn" data-tool="arrow" title="Arrow">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18" stroke-width="1.5"><line x1="5" y1="19" x2="19" y2="5"/><polyline points="12,5 19,5 19,12"/></svg>
+      <span class="tool-lbl">Arrow</span>
+    </button>
+    <button class="tool-btn" data-tool="select" title="Select / Pan">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18" stroke-width="1.5"><path d="M5 3l14 9-7 1-4 7-3-17z"/></svg>
+      <span class="tool-lbl">Pan</span>
+    </button>
+    <div class="panel-sep"></div>
+    <!-- Instruments -->
+    <button class="tool-btn" data-tool="ruler" title="Virtual Ruler" id="btnRuler">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18" stroke-width="1.5"><path d="M21.3 8.7L15.3 2.7a1 1 0 0 0-1.4 0L2.7 13.9a1 1 0 0 0 0 1.4l6 6a1 1 0 0 0 1.4 0L21.3 10.1a1 1 0 0 0 0-1.4z"/><path d="M7.5 10.5l2 2M11.5 6.5l2 2M13.5 16.5l2 2"/></svg>
+      <span class="tool-lbl">Ruler</span>
+    </button>
+    <button class="tool-btn" data-tool="compass" title="Virtual Compass" id="btnCompass">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18" stroke-width="1.5"><circle cx="12" cy="12" r="2"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+      <span class="tool-lbl">Compass</span>
+    </button>
+    <button class="tool-btn" data-tool="protractor" title="Protractor" id="btnProtractor">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18" stroke-width="1.5"><path d="M3 12a9 9 0 0 1 18 0"/><line x1="12" y1="12" x2="12" y2="3"/><line x1="12" y1="12" x2="19.2" y2="7.5"/><line x1="12" y1="12" x2="4.8" y2="7.5"/></svg>
+      <span class="tool-lbl">Angle</span>
+    </button>
+    <div class="panel-sep"></div>
+    <!-- Text -->
+    <button class="tool-btn" data-tool="text" title="Text">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18" stroke-width="1.5"><polyline points="4,7 4,4 20,4 20,7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+      <span class="tool-lbl">Text</span>
+    </button>
+  </div>
+
+  <!-- Right properties panel -->
+  <div id="rightPanel">
+    <div class="rp-header">
+      Properties
+      <button class="rp-close" id="rpClose">✕</button>
+    </div>
+    <div class="rp-body">
+      <div class="rp-group">
+        <div class="rp-label">Ink Color</div>
+        <div class="rp-row" style="flex-wrap:wrap;gap:6px;">
+          <div class="color-swatch active" data-color="#FFFFFF" style="background:#FFFFFF;"></div>
+          <div class="color-swatch" data-color="#D4AF37" style="background:#D4AF37;"></div>
+          <div class="color-swatch" data-color="#22C55E" style="background:#22C55E;"></div>
+          <div class="color-swatch" data-color="#EF4444" style="background:#EF4444;"></div>
+          <div class="color-swatch" data-color="#60a5fa" style="background:#60a5fa;"></div>
+          <div class="color-swatch" data-color="#a78bfa" style="background:#a78bfa;"></div>
+          <div class="color-swatch" data-color="#f97316" style="background:#f97316;"></div>
+          <div class="color-swatch" data-color="#888888" style="background:#888888;"></div>
+        </div>
+      </div>
+      <div class="rp-group">
+        <div class="rp-label">Stroke Width</div>
+        <input type="range" class="rp-slider" id="strokeSlider" min="0.5" max="20" step="0.5" value="2">
+        <div class="rp-row"><span style="font-family:var(--font-mono);font-size:11px;color:var(--gold-pure);" id="strokeVal">2px</span></div>
+      </div>
+      <div class="rp-group">
+        <div class="rp-label">Opacity</div>
+        <input type="range" class="rp-slider" id="opacitySlider" min="5" max="100" step="5" value="100">
+        <div class="rp-row"><span style="font-family:var(--font-mono);font-size:11px;color:var(--gold-pure);" id="opacityVal">100%</span></div>
+      </div>
+      <div class="rp-group">
+        <div class="rp-label">Smoothing</div>
+        <input type="range" class="rp-slider" id="smoothSlider" min="0" max="10" step="1" value="4">
+        <div class="rp-row"><span style="font-family:var(--font-mono);font-size:11px;color:var(--gold-pure);" id="smoothVal">4</span></div>
+      </div>
+      <div class="rp-group" id="eraserProps" style="display:none;">
+        <div class="rp-label">Eraser Mode</div>
+        <div class="rp-row">
+          <button class="rp-btn primary active-mode" id="eraserStrokeBtn" style="border-color:rgba(212,175,55,0.6);color:#D4AF37;">Stroke</button>
+          <button class="rp-btn" id="eraserPixelBtn">Pixel</button>
+        </div>
+        <div style="font-size:9px;font-family:var(--font-mono);color:var(--ink-gray);margin-top:2px;" id="eraserModeHint">Click to remove entire strokes</div>
+      </div>
+      <div class="rp-group" id="rulerProps" style="display:none;">
+        <div class="rp-label">Ruler</div>
+        <div class="rp-row">
+          <button class="rp-btn primary" id="rotRulerL">↺ 15°</button>
+          <button class="rp-btn primary" id="rotRulerR">↻ 15°</button>
+        </div>
+        <div class="rp-row">
+          <span class="rp-label">Angle: </span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--gold-pure);" id="rulerAngleDisp">0°</span>
+        </div>
+      </div>
+      <div class="rp-group" id="compassProps" style="display:none;">
+        <div class="rp-label">Compass Mode</div>
+        <div class="rp-row">
+          <button class="rp-btn primary" id="compassModeBtn">Set Origin</button>
+        </div>
+        <div class="rp-row">
+          <span class="rp-label">Radius: </span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--gold-pure);" id="compassRadiusDisp">—</span>
+        </div>
+      </div>
+      <div class="rp-group" id="eqProps" style="display:none;">
+        <div class="rp-label">Plot Functions</div>
+        <div id="eqList" style="display:flex;flex-direction:column;gap:4px;font-family:var(--font-mono);font-size:10px;color:var(--ink-gray);">No functions plotted</div>
+      </div>
+      <div class="rp-group">
+        <div class="rp-label">Canvas</div>
+        <div class="rp-row">
+          <button class="rp-btn" id="resetViewBtn">Reset View</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Equation panel -->
+  <div id="eqPanel">
+    <input id="eqInput" type="text" placeholder="y = x^2 + 2x − 1  or  sin(x)/x" spellcheck="false"/>
+    <button class="eq-plot-btn" id="eqPlotBtn">Plot</button>
+    <button class="eq-close-btn" id="eqClose">✕</button>
+  </div>
+
+  <!-- Compass info -->
+  <div id="compassInfo">Radius: <span id="cRadius">—</span></div>
+
+  <!-- Zoom controls -->
+  <div id="zoomCtrl">
+    <button class="zoom-btn" id="zoomIn">+</button>
+    <button class="zoom-btn" id="zoomOut">−</button>
+    <button class="zoom-btn" id="zoomFit" title="Fit" style="font-size:11px;font-family:var(--font-mono);">1:1</button>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-badge" id="hud-tool">Tool: <b>Pen</b></div>
+    <div class="hud-badge" id="hud-strokes">Strokes: <b>0</b></div>
+    <div class="hud-badge" id="hud-pressure">Pressure: <b>—</b></div>
+  </div>
+
+  <!-- Tooltip -->
+  <div id="tooltip"></div>
+  <!-- Eraser cursor visual -->
+  <div id="eraserCursor"></div>
+
+  <!-- Home pick message -->
+  <div id="homePickMsg">⊕ Click anywhere to set Home point — ESC to cancel</div>
+
+  <!-- Home / Hotel beacon dots (screen-space markers) -->
+  <div id="homeBeacon"></div>
+  <div id="hotelBeacon"></div>
+
+  <!-- Home / Hotel Panel -->
+  <div id="homePanel">
+    <!-- HOME section -->
+    <button class="home-btn" id="btn-add-home" title="Click a point on canvas to set your Home location">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><polyline points="9,21 9,12 15,12 15,21"/></svg>
+      Add Home
+    </button>
+    <button class="home-btn" id="btn-go-home" title="Jump back to your saved Home point">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+      Go Home
+    </button>
+    <div class="home-sep"></div>
+    <!-- HOTEL section -->
+    <button class="home-btn" id="btn-hotel" title="Hotel: auto-tracks your latest brush stroke. Click to teleport there.">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/><circle cx="17" cy="15" r="2"/></svg>
+      Hotel
+    </button>
+    <button class="home-btn" id="btn-go-hotel" title="Go to Hotel: jump to latest stroke position">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="5,12 3,12 12,3 21,12 19,12"/><path d="M19 12v7a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+      Go Hotel
+    </button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+// ─── State ───────────────────────────────────────────────────────────────────
+const state = {
+  tool: 'pen',
+  color: '#FFFFFF',
+  strokeWidth: 2,
+  opacity: 1,
+  smoothing: 4,
+  gridVisible: true,
+  snapEnabled: false,
+  gridSize: 40,
+  // Camera transform
+  camera: { x: 0, y: 0, scale: 1 },
+  // Drawing
+  isDrawing: false,
+  isPanning: false,
+  lastPanPoint: null,
+  currentPath: null,
+  pressure: 1,
+  // Objects
+  strokes: [],
+  undoStack: [],
+  redoStack: [],
+  // Ruler
+  ruler: { visible: false, x: 0, y: 0, angle: 0, length: 400 },
+  rulerDragging: false,
+  rulerDragStart: null,
+  // Compass
+  compass: { visible: false, ox: 0, oy: 0, radius: 0, hasOrigin: false, mode: 'set-origin' },
+  compassDragging: false,
+  // Protractor
+  protractor: { visible: false, cx: 400, cy: 300, r: 100 },
+  protractorDragging: false,
+  // Equations
+  equations: [],
+  equationColors: ['#D4AF37','#22C55E','#60a5fa','#EF4444','#a78bfa','#f97316'],
+  // Text
+  textInput: null,
+  // Shape preview
+  shapeStart: null,
+  // Smoothing buffer
+  smoothBuffer: [],
+  // Eraser mode: 'pixel' | 'stroke'
+  eraserMode: 'stroke',
+  // Home / Hotel
+  homePoint: null,       // { wx, wy, scale } — user-defined home
+  hotelPoint: null,      // { wx, wy, scale } — auto-tracking latest stroke
+  hotelEnabled: false,
+};
+
+// ─── Canvas setup ─────────────────────────────────────────────────────────────
+const app = document.getElementById('app');
+const mainCanvas = document.getElementById('mainCanvas');
+const gridCanvas = document.getElementById('gridCanvas');
+const mainCtx = mainCanvas.getContext('2d');
+const gridCtx = gridCanvas.getContext('2d');
+
+function resizeCanvases(){
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  mainCanvas.width = w; mainCanvas.height = h;
+  gridCanvas.width = w; gridCanvas.height = h;
+  renderAll();
+}
+window.addEventListener('resize', resizeCanvases);
+resizeCanvases();
+
+// ─── Transform helpers ────────────────────────────────────────────────────────
+function screenToWorld(sx, sy){
+  return {
+    x: (sx - mainCanvas.width/2 - state.camera.x) / state.camera.scale,
+    y: (sy - mainCanvas.height/2 - state.camera.y) / state.camera.scale
+  };
+}
+function worldToScreen(wx, wy){
+  return {
+    x: wx * state.camera.scale + mainCanvas.width/2 + state.camera.x,
+    y: wy * state.camera.scale + mainCanvas.height/2 + state.camera.y
+  };
+}
+function applyCamera(ctx){
+  ctx.setTransform(state.camera.scale, 0, 0, state.camera.scale,
+    mainCanvas.width/2 + state.camera.x,
+    mainCanvas.height/2 + state.camera.y);
+}
+function snapToGrid(wx, wy){
+  if(!state.snapEnabled) return {x:wx,y:wy};
+  const g = state.gridSize;
+  return { x: Math.round(wx/g)*g, y: Math.round(wy/g)*g };
+}
+
+// ─── Grid rendering ───────────────────────────────────────────────────────────
+function renderGrid(){
+  const ctx = gridCtx;
+  const w = gridCanvas.width, h = gridCanvas.height;
+  ctx.clearRect(0,0,w,h);
+  if(!state.gridVisible) return;
+
+  const scale = state.camera.scale;
+  const cx = state.camera.x + w/2;
+  const cy = state.camera.y + h/2;
+  const gs = state.gridSize * scale;
+
+  const minorAlpha = Math.max(0, Math.min(0.25, (scale - 0.3) / 0.7 * 0.25));
+  const majorAlpha = Math.max(0.1, Math.min(0.45, scale * 0.45));
+
+  // Minor dots
+  if(gs > 10){
+    ctx.fillStyle = `rgba(136,136,136,${minorAlpha})`;
+    const startX = ((cx % gs) + gs) % gs;
+    const startY = ((cy % gs) + gs) % gs;
+    for(let x = startX; x < w; x += gs){
+      for(let y = startY; y < h; y += gs){
+        ctx.beginPath();
+        ctx.arc(x, y, 1, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+  }
+
+  // Major grid lines (every 5 cells)
+  const mgs = gs * 5;
+  ctx.strokeStyle = `rgba(136,136,136,${majorAlpha * 0.4})`;
+  ctx.lineWidth = 0.5;
+  const msx = ((cx % mgs) + mgs) % mgs;
+  const msy = ((cy % mgs) + mgs) % mgs;
+  ctx.beginPath();
+  for(let x = msx; x < w; x += mgs){ctx.moveTo(x,0);ctx.lineTo(x,h);}
+  for(let y = msy; y < h; y += mgs){ctx.moveTo(0,y);ctx.lineTo(w,y);}
+  ctx.stroke();
+}
+
+// ─── Stroke smoothing (Catmull-Rom) ──────────────────────────────────────────
+function catmullRom(p0,p1,p2,p3,t){
+  const t2=t*t,t3=t2*t;
+  return {
+    x: 0.5*((2*p1.x)+(-p0.x+p2.x)*t+(2*p0.x-5*p1.x+4*p2.x-p3.x)*t2+(-p0.x+3*p1.x-3*p2.x+p3.x)*t3),
+    y: 0.5*((2*p1.y)+(-p0.y+p2.y)*t+(2*p0.y-5*p1.y+4*p2.y-p3.y)*t2+(-p0.y+3*p1.y-3*p2.y+p3.y)*t3)
+  };
+}
+function smoothPoints(pts, tension){
+  if(pts.length < 2) return pts;
+  if(pts.length === 2) return pts;
+  const result = [pts[0]];
+  for(let i=0;i<pts.length-1;i++){
+    const p0 = pts[Math.max(0,i-1)];
+    const p1 = pts[i];
+    const p2 = pts[i+1];
+    const p3 = pts[Math.min(pts.length-1,i+2)];
+    const steps = Math.max(2, Math.floor(tension * 2));
+    for(let t=1;t<=steps;t++){
+      result.push(catmullRom(p0,p1,p2,p3,t/steps));
+    }
+  }
+  return result;
+}
+
+// ─── Render strokes ───────────────────────────────────────────────────────────
+function renderStrokes(){
+  const ctx = mainCtx;
+  const w = mainCanvas.width, h = mainCanvas.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.save();
+  applyCamera(ctx);
+
+  for(const stroke of state.strokes){
+    drawStroke(ctx, stroke);
+  }
+  if(state.currentPath && state.currentPath.points.length > 0){
+    drawStroke(ctx, state.currentPath);
+  }
+  ctx.restore();
+}
+function drawStroke(ctx, stroke){
+  if(!stroke || !stroke.points) return;
+  if(stroke.type === '_strokeerase') return;
+  ctx.save();
+  ctx.globalAlpha = stroke.opacity || 1;
+  ctx.strokeStyle = stroke.color || '#FFFFFF';
+  ctx.fillStyle = stroke.color || '#FFFFFF';
+  ctx.lineWidth = stroke.width || 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  if(stroke.type === 'pen' || stroke.type === 'eraser'){
+    const pts = stroke.points;
+    if(pts.length === 0) {ctx.restore();return;}
+    if(pts.length === 1){
+      ctx.beginPath();
+      ctx.arc(pts[0].x, pts[0].y, (stroke.width||2)/2, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore(); return;
+    }
+    if(stroke.type === 'eraser'){
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.globalAlpha = 1;
+    }
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for(let i=1;i<pts.length-1;i++){
+      const mx = (pts[i].x + pts[i+1].x)/2;
+      const my = (pts[i].y + pts[i+1].y)/2;
+      ctx.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
+    }
+    ctx.lineTo(pts[pts.length-1].x, pts[pts.length-1].y);
+    ctx.stroke();
+  } else if(stroke.type === 'line'){
+    if(stroke.points.length < 2) {ctx.restore();return;}
+    const a = stroke.points[0], b = stroke.points[stroke.points.length-1];
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+  } else if(stroke.type === 'arrow'){
+    if(stroke.points.length < 2) {ctx.restore();return;}
+    const a = stroke.points[0], b = stroke.points[stroke.points.length-1];
+    const angle = Math.atan2(b.y-a.y, b.x-a.x);
+    const hw = Math.max(stroke.width*3, 10);
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(b.x, b.y);
+    ctx.lineTo(b.x - hw*Math.cos(angle-0.45), b.y - hw*Math.sin(angle-0.45));
+    ctx.lineTo(b.x - hw*Math.cos(angle+0.45), b.y - hw*Math.sin(angle+0.45));
+    ctx.closePath(); ctx.fill();
+  } else if(stroke.type === 'rect'){
+    if(stroke.points.length < 2) {ctx.restore();return;}
+    const a = stroke.points[0], b = stroke.points[stroke.points.length-1];
+    ctx.strokeRect(a.x, a.y, b.x-a.x, b.y-a.y);
+  } else if(stroke.type === 'circle'){
+    if(stroke.points.length < 2) {ctx.restore();return;}
+    const a = stroke.points[0], b = stroke.points[stroke.points.length-1];
+    const r = Math.hypot(b.x-a.x, b.y-a.y);
+    ctx.beginPath(); ctx.arc(a.x, a.y, r, 0, Math.PI*2); ctx.stroke();
+  } else if(stroke.type === 'equation'){
+    if(!stroke.fn) {ctx.restore();return;}
+    renderEquationStroke(ctx, stroke);
+  } else if(stroke.type === 'axes'){
+    renderAxesStroke(ctx, stroke);
+  } else if(stroke.type === 'compass-arc'){
+    ctx.beginPath();
+    ctx.arc(stroke.ox, stroke.oy, stroke.radius, 0, Math.PI*2);
+    ctx.stroke();
+  } else if(stroke.type === 'text'){
+    ctx.font = `${stroke.fontSize||18}px 'JetBrains Mono', monospace`;
+    ctx.fillStyle = stroke.color;
+    ctx.globalAlpha = stroke.opacity||1;
+    ctx.fillText(stroke.text||'', stroke.x, stroke.y);
+  }
+  ctx.restore();
+}
+
+function renderEquationStroke(ctx, stroke){
+  const w = mainCanvas.width;
+  const h = mainCanvas.height;
+  // World coords of left and right screen edges
+  const x0 = (0 - w/2 - state.camera.x) / state.camera.scale;
+  const x1 = (w - w/2 - state.camera.x) / state.camera.scale;
+  const steps = Math.max(400, Math.floor(w / 1.5));
+  const dx = (x1 - x0) / steps;
+
+  ctx.beginPath();
+  let first = true;
+  let prevWy = null;
+  const yMin = (0 - h/2 - state.camera.y) / state.camera.scale;
+  const yMax = (h - h/2 - state.camera.y) / state.camera.scale;
+  const yRange = Math.abs(yMax - yMin);
+
+  for(let i=0;i<=steps;i++){
+    const wx = x0 + i * dx;
+    let wy;
+    try { wy = stroke.fn(wx); } catch(e){ first=true; prevWy=null; continue; }
+    if(!isFinite(wy) || isNaN(wy)){ first=true; prevWy=null; continue; }
+    // Discontinuity detection
+    if(prevWy !== null && Math.abs(wy - prevWy) > yRange * 2){ first=true; }
+    if(first){ ctx.moveTo(wx, -wy); first=false; }
+    else { ctx.lineTo(wx, -wy); }
+    prevWy = wy;
+  }
+  ctx.stroke();
+}
+
+function renderAxesStroke(ctx, stroke){
+  const w = mainCanvas.width, h = mainCanvas.height;
+  const scale = state.camera.scale;
+  const ox = stroke.ox || 0, oy = stroke.oy || 0;
+  const tickSize = stroke.tickSize || 0.5;
+
+  // Compute world-space extent of screen edges (with generous padding)
+  const margin = 40 / scale;
+  const xLeft  = (0 - w/2 - state.camera.x) / scale - margin;
+  const xRight = (w - w/2 - state.camera.x) / scale + margin;
+  const yTop   = (0 - h/2 - state.camera.y) / scale - margin;
+  const yBot   = (h - h/2 - state.camera.y) / scale + margin;
+
+  ctx.strokeStyle = stroke.color || 'rgba(255,255,255,0.7)';
+  ctx.lineWidth = (stroke.width||1.5);
+  ctx.lineCap = 'round';
+
+  // X axis — full width of screen
+  ctx.beginPath();
+  ctx.moveTo(xLeft, oy); ctx.lineTo(xRight, oy);
+  // Arrow head at right
+  ctx.moveTo(xRight - 0.4/scale, oy - 0.2/scale);
+  ctx.lineTo(xRight, oy);
+  ctx.lineTo(xRight - 0.4/scale, oy + 0.2/scale);
+  ctx.stroke();
+
+  // Y axis — full height of screen
+  ctx.beginPath();
+  ctx.moveTo(ox, yBot); ctx.lineTo(ox, yTop);
+  // Arrow head at top
+  ctx.moveTo(ox - 0.2/scale, yTop + 0.4/scale);
+  ctx.lineTo(ox, yTop);
+  ctx.lineTo(ox + 0.2/scale, yTop + 0.4/scale);
+  ctx.stroke();
+
+  // Ticks & labels — cover full screen range
+  ctx.lineWidth = (stroke.width||1.5) * 0.5;
+  const labelSize = Math.max(8, Math.min(14, 12 / scale));
+  ctx.font = `${labelSize}px 'JetBrains Mono', monospace`;
+  ctx.fillStyle = stroke.color || 'rgba(255,255,255,0.7)';
+
+  // Compute tick spacing: aim for ~60px between ticks on screen
+  const rawStep = 60 / scale;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const candidates = [1, 2, 5, 10].map(f => f * magnitude);
+  const step = candidates.find(c => c >= rawStep) || candidates[candidates.length-1];
+  const tickH = 4 / scale;
+
+  // X ticks
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  const xiStart = Math.ceil(xLeft / step) * step;
+  for(let xi = xiStart; xi <= xRight; xi += step){
+    if(Math.abs(xi - ox) < step * 0.01) continue;
+    ctx.beginPath();
+    ctx.moveTo(xi, oy - tickH); ctx.lineTo(xi, oy + tickH);
+    ctx.stroke();
+    const lbl = Math.abs(xi) < step * 0.01 ? '0' : parseFloat(xi.toPrecision(6)).toString();
+    ctx.fillText(lbl, xi, oy + tickH + 1/scale);
+  }
+  // Y ticks
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  const yiStart = Math.ceil(yTop / step) * step;
+  for(let yi = yiStart; yi <= yBot; yi += step){
+    if(Math.abs(yi - oy) < step * 0.01) continue;
+    ctx.beginPath();
+    ctx.moveTo(ox - tickH, yi); ctx.lineTo(ox + tickH, yi);
+    ctx.stroke();
+    const lbl = parseFloat((-yi).toPrecision(6)).toString();
+    ctx.fillText(lbl, ox - tickH - 1/scale, yi);
+  }
+  // Axis labels
+  ctx.font = `bold ${labelSize * 1.1}px 'JetBrains Mono', monospace`;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+  ctx.fillText('x', xRight - 0.2/scale, oy - 0.1/scale);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText('y', ox + 0.2/scale, yTop + 0.1/scale);
+}
+
+// ─── Ruler rendering ──────────────────────────────────────────────────────────
+function renderRuler(){
+  const svg = document.getElementById('rulerSvg');
+  if(!state.ruler.visible){ svg.innerHTML=''; return; }
+  const r = state.ruler;
+  // Convert world coords to screen
+  const sc = worldToScreen(r.x, r.y);
+  const halfLen = r.length / 2 * state.camera.scale;
+  const angle = r.angle;
+  const x1 = sc.x - Math.cos(angle) * halfLen;
+  const y1 = sc.y - Math.sin(angle) * halfLen;
+  const x2 = sc.x + Math.cos(angle) * halfLen;
+  const y2 = sc.y + Math.sin(angle) * halfLen;
+  const nx = -Math.sin(angle);
+  const ny = Math.cos(angle);
+  const rh = 28;
+
+  // Build polygon for ruler body
+  const pts = [
+    [x1 + nx*2, y1 + ny*2],[x2 + nx*2, y2 + ny*2],
+    [x2 + nx*rh, y2 + ny*rh],[x1 + nx*rh, y1 + ny*rh]
+  ];
+  const ptStr = pts.map(p=>p.join(',')).join(' ');
+
+  // Tick marks
+  const screenLen = halfLen * 2;
+  const pixelsPerUnit = state.camera.scale * 40;
+  const tickCount = Math.floor(screenLen / (pixelsPerUnit / 5));
+  let ticks = '';
+  for(let i=0;i<=tickCount;i++){
+    const t = i / tickCount;
+    const tx = x1 + (x2-x1)*t;
+    const ty = y1 + (y2-y1)*t;
+    const isMain = i % 5 === 0;
+    const th = isMain ? rh * 0.5 : rh * 0.25;
+    ticks += `<line x1="${tx + nx*(rh*0.1)}" y1="${ty + ny*(rh*0.1)}" x2="${tx + nx*(rh*0.1+th)}" y2="${ty + ny*(rh*0.1+th)}" stroke="rgba(212,175,55,0.6)" stroke-width="${isMain?1.5:0.8}"/>`;
+    if(isMain && i>0){
+      const lbl = Math.round(i * (r.length / tickCount) / 40 * 10);
+      const lx = tx + nx*(rh*0.1 + th + 4);
+      const ly = ty + ny*(rh*0.1 + th + 4);
+      ticks += `<text x="${lx}" y="${ly}" fill="rgba(212,175,55,0.5)" font-size="8" font-family="JetBrains Mono,monospace" text-anchor="middle" dominant-baseline="middle" transform="rotate(${angle*180/Math.PI},${lx},${ly})">${lbl}</text>`;
+    }
+  }
+
+  svg.innerHTML = `
+    <g id="rulerGroup" cursor="move">
+      <polygon points="${ptStr}" fill="rgba(18,18,18,0.85)" stroke="rgba(212,175,55,0.45)" stroke-width="1" rx="2"/>
+      <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(212,175,55,0.9)" stroke-width="1.5"/>
+      ${ticks}
+      <circle cx="${sc.x}" cy="${sc.y}" r="5" fill="rgba(212,175,55,0.3)" stroke="#D4AF37" stroke-width="1"/>
+    </g>
+  `;
+  document.getElementById('rulerGroup').addEventListener('pointerdown', onRulerPointerDown);
+}
+
+// ─── Compass rendering ────────────────────────────────────────────────────────
+function renderCompass(){
+  const svg = document.getElementById('compassSvg');
+  if(!state.compass.visible){ svg.innerHTML=''; return; }
+  const c = state.compass;
+  let html = '';
+  if(c.hasOrigin){
+    const sc = worldToScreen(c.ox, c.oy);
+    const sr = c.radius * state.camera.scale;
+    // Preview circle
+    html += `<circle cx="${sc.x}" cy="${sc.y}" r="${sr}" fill="none" stroke="rgba(212,175,55,0.25)" stroke-width="1.5" stroke-dasharray="6,4"/>`;
+    // Origin point
+    html += `<circle cx="${sc.x}" cy="${sc.y}" r="6" fill="rgba(212,175,55,0.2)" stroke="#D4AF37" stroke-width="1.5" cursor="move" id="compassOrigin"/>`;
+    // Cross
+    html += `<line x1="${sc.x-10}" y1="${sc.y}" x2="${sc.x+10}" y2="${sc.y}" stroke="#D4AF37" stroke-width="1"/>`;
+    html += `<line x1="${sc.x}" y1="${sc.y-10}" x2="${sc.x}" y2="${sc.y+10}" stroke="#D4AF37" stroke-width="1"/>`;
+    // Radius indicator
+    if(c.radius > 0){
+      html += `<line x1="${sc.x}" y1="${sc.y}" x2="${sc.x+sr}" y2="${sc.y}" stroke="rgba(212,175,55,0.4)" stroke-width="1" stroke-dasharray="3,3"/>`;
+      const mid = sc.x + sr/2;
+      html += `<text x="${mid}" y="${sc.y-6}" fill="#D4AF37" font-size="10" font-family="JetBrains Mono,monospace" text-anchor="middle">r=${(c.radius).toFixed(1)}</text>`;
+    }
+  }
+  svg.innerHTML = html;
+  const orig = document.getElementById('compassOrigin');
+  if(orig) orig.addEventListener('pointerdown', onCompassOriginDown);
+}
+
+// ─── Protractor rendering ─────────────────────────────────────────────────────
+function renderProtractor(){
+  const svg = document.getElementById('protractorSvg');
+  if(!state.protractor.visible){ svg.innerHTML=''; return; }
+  const p = state.protractor;
+  const sc = worldToScreen(p.cx, p.cy);
+  const sr = p.r * state.camera.scale;
+  let html = `
+    <circle cx="${sc.x}" cy="${sc.y}" r="${sr}" fill="rgba(212,175,55,0.04)" stroke="rgba(212,175,55,0.4)" stroke-width="1" stroke-dasharray="4,4"/>
+    <line x1="${sc.x - sr*1.1}" y1="${sc.y}" x2="${sc.x + sr*1.1}" y2="${sc.y}" stroke="rgba(212,175,55,0.35)" stroke-width="1"/>
+    <circle cx="${sc.x}" cy="${sc.y}" r="4" fill="#D4AF37" id="protractorCenter" cursor="move"/>
+  `;
+  const angles = [0,15,30,45,60,75,90,105,120,135,150,165,180];
+  for(const a of angles){
+    const rad = a * Math.PI / 180;
+    const isMajor = a % 45 === 0;
+    const tick = isMajor ? sr * 0.12 : sr * 0.07;
+    const ox = sc.x + sr * Math.cos(rad);
+    const oy = sc.y - sr * Math.sin(rad);
+    const ox2 = sc.x + (sr - tick) * Math.cos(rad);
+    const oy2 = sc.y - (sr - tick) * Math.sin(rad);
+    html += `<line x1="${ox}" y1="${oy}" x2="${ox2}" y2="${oy2}" stroke="rgba(212,175,55,${isMajor?0.7:0.4})" stroke-width="${isMajor?1.5:0.8}"/>`;
+    if(isMajor){
+      const lx = sc.x + (sr + 12) * Math.cos(rad);
+      const ly = sc.y - (sr + 12) * Math.sin(rad);
+      html += `<text x="${lx}" y="${ly}" fill="rgba(212,175,55,0.8)" font-size="9" font-family="JetBrains Mono,monospace" text-anchor="middle" dominant-baseline="middle">${a}°</text>`;
+    }
+    // Mirror
+    if(a > 0){
+      const rad2 = -a * Math.PI / 180;
+      const ox3 = sc.x + sr * Math.cos(rad2);
+      const oy3 = sc.y - sr * Math.sin(rad2);
+      const ox4 = sc.x + (sr-tick) * Math.cos(rad2);
+      const oy4 = sc.y - (sr-tick) * Math.sin(rad2);
+      html += `<line x1="${ox3}" y1="${oy3}" x2="${ox4}" y2="${oy4}" stroke="rgba(212,175,55,${isMajor?0.7:0.4})" stroke-width="${isMajor?1.5:0.8}"/>`;
+    }
+  }
+  svg.innerHTML = html;
+  const pc = document.getElementById('protractorCenter');
+  if(pc) pc.addEventListener('pointerdown', onProtractorDown);
+}
+
+// ─── Full render ──────────────────────────────────────────────────────────────
+function renderAll(){
+  renderGrid();
+  renderStrokes();
+  renderRuler();
+  renderCompass();
+  renderProtractor();
+  // Update navigation beacons after each render
+  if(typeof updateHomeBeacon === 'function') updateHomeBeacon();
+  if(typeof updateHotelBeacon === 'function') updateHotelBeacon();
+}
+
+// ─── Pointer events ───────────────────────────────────────────────────────────
+mainCanvas.addEventListener('pointermove', onPointerMove);
+mainCanvas.addEventListener('pointerdown', onPointerDown);
+mainCanvas.addEventListener('pointerup', onPointerUp);
+mainCanvas.addEventListener('pointercancel', onPointerUp);
+mainCanvas.addEventListener('wheel', onWheel, {passive: false});
+
+function getEventPos(e){
+  const rect = mainCanvas.getBoundingClientRect();
+  return { sx: e.clientX - rect.left, sy: e.clientY - rect.top };
+}
+
+function onPointerDown(e){
+  e.preventDefault();
+  mainCanvas.setPointerCapture(e.pointerId);
+  const {sx, sy} = getEventPos(e);
+  state.pressure = e.pressure > 0 ? e.pressure : 1;
+
+  // Touch pan
+  if(e.pointerType === 'touch'){
+    state.isPanning = true;
+    state.lastPanPoint = {x: e.clientX, y: e.clientY};
+    return;
+  }
+  // Middle mouse or select = pan
+  if(e.button === 1 || state.tool === 'select'){
+    state.isPanning = true;
+    state.lastPanPoint = {x: e.clientX, y: e.clientY};
+    mainCanvas.style.cursor = 'grabbing';
+    return;
+  }
+
+  const wp = screenToWorld(sx, sy);
+  const snapped = snapToGrid(wp.x, wp.y);
+
+  if(state.tool === 'ruler'){
+    // Ruler drag handled separately
+    return;
+  }
+  if(state.tool === 'compass'){
+    handleCompassDown(snapped, e);
+    return;
+  }
+  if(state.tool === 'protractor'){
+    state.protractor.visible = true;
+    state.protractor.cx = snapped.x;
+    state.protractor.cy = snapped.y;
+    state.protractorDragging = true;
+    renderProtractor();
+    return;
+  }
+  if(state.tool === 'text'){
+    showTextInput(sx, sy, snapped);
+    return;
+  }
+
+  state.isDrawing = true;
+  const w = (state.strokeWidth * state.pressure);
+
+  // Stroke eraser: immediately delete strokes under cursor
+  if(state.tool === 'eraser' && state.eraserMode === 'stroke'){
+    const threshold = Math.max(8, state.strokeWidth * 2) / state.camera.scale;
+    const before = state.strokes.length;
+    state.strokes = state.strokes.filter(s => !pointHitsStroke(snapped, s, threshold));
+    if(state.strokes.length < before){ state.undoStack.push({type:'stroke',count:before-state.strokes.length}); updateHUD(); renderAll(); }
+    state.currentPath = { type:'_strokeerase', points:[], color:'transparent', width:1, opacity:1 };
+    return;
+  }
+
+  state.currentPath = {
+    type: state.tool,
+    color: state.color,
+    width: w,
+    opacity: state.opacity,
+    points: [snapped],
+  };
+  state.shapeStart = snapped;
+  state.smoothBuffer = [snapped];
+}
+
+function onPointerMove(e){
+  e.preventDefault();
+  const {sx, sy} = getEventPos(e);
+  const wp = screenToWorld(sx, sy);
+  state.pressure = e.pressure > 0 ? e.pressure : 1;
+
+  // Update coord display
+  document.getElementById('coord-x').textContent = wp.x.toFixed(1);
+  document.getElementById('coord-y').textContent = (-wp.y).toFixed(1);
+  document.getElementById('hud-pressure').innerHTML = `Pressure: <b>${(state.pressure*100).toFixed(0)}%</b>`;
+
+  // Eraser cursor
+  const eraserCursor = document.getElementById('eraserCursor');
+  if(state.tool === 'eraser'){
+    const sz = Math.max(16, state.strokeWidth * 4 * state.camera.scale);
+    eraserCursor.style.display = 'block';
+    eraserCursor.style.width = sz+'px';
+    eraserCursor.style.height = sz+'px';
+    eraserCursor.style.left = sx+'px';
+    eraserCursor.style.top = sy+'px';
+    mainCanvas.style.cursor = 'none';
+  } else {
+    eraserCursor.style.display = 'none';
+  }
+
+  if(state.isPanning && state.lastPanPoint){
+    const dx = e.clientX - state.lastPanPoint.x;
+    const dy = e.clientY - state.lastPanPoint.y;
+    state.camera.x += dx;
+    state.camera.y += dy;
+    state.lastPanPoint = {x: e.clientX, y: e.clientY};
+    renderAll();
+    return;
+  }
+  if(state.rulerDragging){
+    const dx = e.clientX - state.rulerDragStart.x;
+    const dy = e.clientY - state.rulerDragStart.y;
+    state.ruler.x = state.rulerDragStart.wx + dx / state.camera.scale;
+    state.ruler.y = state.rulerDragStart.wy + dy / state.camera.scale;
+    renderRuler();
+    return;
+  }
+  if(state.compassDragging){
+    const snapped = snapToGrid(wp.x, wp.y);
+    state.compass.ox = snapped.x;
+    state.compass.oy = snapped.y;
+    renderCompass();
+    return;
+  }
+  if(state.protractorDragging){
+    const dx = wp.x - state.protractor.cx;
+    const dy = wp.y - state.protractor.cy;
+    state.protractor.r = Math.max(30 / state.camera.scale, Math.hypot(dx, dy));
+    renderProtractor();
+    return;
+  }
+  if(!state.isDrawing || !state.currentPath) return;
+
+  const snapped = snapToGrid(wp.x, wp.y);
+
+  if(state.tool === 'pen'){
+    const snappedPt = rulerSnapPoint(snapped);
+    // Dynamic pressure-based width
+    const w = state.strokeWidth * (0.4 + state.pressure * 0.6);
+    state.currentPath.width = w;
+    state.smoothBuffer.push(snappedPt);
+    if(state.smoothBuffer.length > state.smoothing + 1){
+      state.smoothBuffer.shift();
+    }
+    // Exponential smoothing
+    const alpha = 0.3 + (1 - state.smoothing / 10) * 0.6;
+    const last = state.currentPath.points[state.currentPath.points.length - 1];
+    const smoothed = {
+      x: last.x + alpha * (snappedPt.x - last.x),
+      y: last.y + alpha * (snappedPt.y - last.y)
+    };
+    state.currentPath.points.push(smoothed);
+    // Live hotel tracking while drawing
+    if(state.hotelEnabled){
+      state.hotelPoint = { wx: smoothed.x, wy: smoothed.y, scale: state.camera.scale };
+      if(typeof updateHotelBeacon === 'function') updateHotelBeacon();
+    }
+  } else if(state.tool === 'eraser'){
+    if(state.eraserMode === 'stroke'){
+      // Stroke erase mode: delete strokes under cursor as we drag
+      const threshold = Math.max(8, state.strokeWidth * 2) / state.camera.scale;
+      const before = state.strokes.length;
+      state.strokes = state.strokes.filter(s => !pointHitsStroke(snapped, s, threshold));
+      if(state.strokes.length < before){ updateHUD(); renderAll(); }
+      return;
+    }
+    state.currentPath.points.push(snapped);
+  } else {
+    // Shape preview - replace last point
+    if(state.currentPath.points.length > 1){
+      state.currentPath.points[state.currentPath.points.length-1] = snapped;
+    } else {
+      state.currentPath.points.push(snapped);
+    }
+  }
+  renderStrokes();
+}
+
+function onPointerUp(e){
+  if(state.tool !== 'eraser') mainCanvas.style.cursor = 'crosshair';
+  if(state.isPanning){ state.isPanning = false; state.lastPanPoint = null; return; }
+  if(state.rulerDragging){ state.rulerDragging = false; return; }
+  if(state.compassDragging){ state.compassDragging = false; return; }
+  if(state.protractorDragging){ state.protractorDragging = false; return; }
+  if(!state.isDrawing || !state.currentPath) return;
+
+  state.isDrawing = false;
+  // Don't commit stroke-erase placeholder
+  if(state.currentPath && state.currentPath.type === '_strokeerase'){
+    state.currentPath = null;
+    return;
+  }
+  // Commit compass arc
+  if(state.tool === 'compass' && state.compass.hasOrigin && state.compass.radius > 0){
+    pushStroke({
+      type: 'compass-arc',
+      color: state.color,
+      width: state.strokeWidth,
+      opacity: state.opacity,
+      ox: state.compass.ox,
+      oy: state.compass.oy,
+      radius: state.compass.radius
+    });
+    state.currentPath = null;
+    updateHUD();
+    renderAll();
+    return;
+  }
+  if(state.currentPath.points.length > 0){
+    pushStroke({...state.currentPath});
+  }
+  state.currentPath = null;
+  state.redoStack = [];
+  updateHUD();
+  renderAll();
+}
+
+// ─── Ruler snap ───────────────────────────────────────────────────────────────
+function rulerSnapPoint(pt){
+  if(!state.ruler.visible) return pt;
+  const r = state.ruler;
+  const sc = worldToScreen(r.x * state.camera.scale + mainCanvas.width/2 + state.camera.x, 0);
+  // Ruler line in world space
+  const hw = r.length / 2;
+  const rx1 = r.x - Math.cos(r.angle) * hw;
+  const ry1 = r.y - Math.sin(r.angle) * hw;
+  const rx2 = r.x + Math.cos(r.angle) * hw;
+  const ry2 = r.y + Math.sin(r.angle) * hw;
+
+  // Distance from pt to ruler line
+  const dx = rx2 - rx1, dy = ry2 - ry1;
+  const len2 = dx*dx + dy*dy;
+  if(len2 === 0) return pt;
+  let t = ((pt.x - rx1)*dx + (pt.y - ry1)*dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const nearest = { x: rx1 + t*dx, y: ry1 + t*dy };
+  const dist = Math.hypot(pt.x - nearest.x, pt.y - nearest.y);
+  const snapThreshold = 15 / state.camera.scale;
+  if(dist < snapThreshold) return nearest;
+  return pt;
+}
+
+// ─── Compass logic ────────────────────────────────────────────────────────────
+function handleCompassDown(wp, e){
+  const c = state.compass;
+  if(!c.hasOrigin || c.mode === 'set-origin'){
+    c.ox = wp.x; c.oy = wp.y;
+    c.hasOrigin = true; c.radius = 0;
+    c.mode = 'set-radius';
+    document.getElementById('compassModeBtn').textContent = 'Drawing Arc';
+    state.compass.visible = true;
+    state.isDrawing = true;
+    state.currentPath = { type:'compass-arc', color:state.color, width:state.strokeWidth, opacity:state.opacity, ox:c.ox, oy:c.oy, radius:0, points:[wp] };
+  } else {
+    // Drawing radius
+    c.radius = Math.hypot(wp.x - c.ox, wp.y - c.oy);
+    state.isDrawing = true;
+    state.currentPath = { type:'compass-arc', color:state.color, width:state.strokeWidth, opacity:state.opacity, ox:c.ox, oy:c.oy, radius:c.radius, points:[wp] };
+  }
+  renderCompass();
+}
+
+// Watch for compass radius changes during drag
+const origOnPointerMove = onPointerMove;
+mainCanvas.removeEventListener('pointermove', onPointerMove);
+mainCanvas.addEventListener('pointermove', function(e){
+  onPointerMove(e);
+  if(state.tool === 'compass' && state.isDrawing && state.currentPath){
+    const {sx,sy} = getEventPos(e);
+    const wp = screenToWorld(sx,sy);
+    state.compass.radius = Math.hypot(wp.x - state.compass.ox, wp.y - state.compass.oy);
+    state.currentPath.radius = state.compass.radius;
+    document.getElementById('cRadius').textContent = state.compass.radius.toFixed(2);
+    document.getElementById('compassRadiusDisp').textContent = state.compass.radius.toFixed(2);
+    renderCompass();
+    renderStrokes();
+  }
+});
+
+// ─── Ruler drag ───────────────────────────────────────────────────────────────
+function onRulerPointerDown(e){
+  if(state.tool !== 'ruler') return;
+  e.stopPropagation();
+  state.rulerDragging = true;
+  state.rulerDragStart = {
+    x: e.clientX, y: e.clientY,
+    wx: state.ruler.x, wy: state.ruler.y
+  };
+}
+function onCompassOriginDown(e){
+  if(state.tool !== 'compass') return;
+  e.stopPropagation();
+  state.compassDragging = true;
+}
+function onProtractorDown(e){
+  e.stopPropagation();
+  state.protractorDragging = true;
+}
+
+// ─── Wheel / zoom ─────────────────────────────────────────────────────────────
+function onWheel(e){
+  e.preventDefault();
+  const rect = mainCanvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const zoomFactor = e.deltaY < 0 ? 1.1 : 0.909;
+  // World point under cursor before zoom
+  const wx = (mx - mainCanvas.width/2 - state.camera.x) / state.camera.scale;
+  const wy = (my - mainCanvas.height/2 - state.camera.y) / state.camera.scale;
+  state.camera.scale = Math.max(0.05, Math.min(50, state.camera.scale * zoomFactor));
+  // Keep the world point under cursor at the same screen position
+  state.camera.x = mx - mainCanvas.width/2 - wx * state.camera.scale;
+  state.camera.y = my - mainCanvas.height/2 - wy * state.camera.scale;
+  document.getElementById('coord-z').textContent = Math.round(state.camera.scale * 100);
+  renderAll();
+}
+
+// ─── Eraser mode ──────────────────────────────────────────────────────────────
+function setEraserMode(mode){
+  state.eraserMode = mode;
+  document.getElementById('eraserStrokeBtn').style.cssText = mode==='stroke' ? 'border-color:rgba(212,175,55,0.6);color:#D4AF37;' : '';
+  document.getElementById('eraserPixelBtn').style.cssText = mode==='pixel' ? 'border-color:rgba(212,175,55,0.6);color:#D4AF37;' : '';
+  document.getElementById('eraserModeHint').textContent = mode==='stroke' ? 'Click to remove entire strokes' : 'Paint to erase pixels';
+}
+
+// Point-in-stroke hit test for stroke eraser
+function pointHitsStroke(pt, stroke, threshold){
+  if(!stroke || !stroke.points) return false;
+  const pts = stroke.points;
+  if(stroke.type === 'equation' || stroke.type === 'axes') return false; // skip special
+  if(stroke.type === 'compass-arc'){
+    const d = Math.hypot(pt.x - stroke.ox, pt.y - stroke.oy);
+    return Math.abs(d - stroke.radius) < threshold;
+  }
+  if(pts.length === 0) return false;
+  if(pts.length === 1) return Math.hypot(pt.x-pts[0].x, pt.y-pts[0].y) < threshold;
+  for(let i=0;i<pts.length-1;i++){
+    const a=pts[i], b=pts[i+1];
+    const dx=b.x-a.x, dy=b.y-a.y;
+    const len2=dx*dx+dy*dy;
+    if(len2===0){ if(Math.hypot(pt.x-a.x,pt.y-a.y)<threshold) return true; continue; }
+    let t=((pt.x-a.x)*dx+(pt.y-a.y)*dy)/len2;
+    t=Math.max(0,Math.min(1,t));
+    const nx=a.x+t*dx, ny=a.y+t*dy;
+    if(Math.hypot(pt.x-nx,pt.y-ny)<threshold) return true;
+  }
+  return false;
+}
+function pushStroke(s){
+  state.strokes.push(s);
+  state.undoStack.push({type:'stroke', count:1});
+  // Hotel: auto-track the latest stroke's last point
+  if(state.hotelEnabled){
+    const pts = s.points;
+    if(pts && pts.length > 0){
+      const last = pts[pts.length-1];
+      state.hotelPoint = { wx: last.x, wy: last.y, scale: state.camera.scale };
+    } else if(s.type==='text'){
+      state.hotelPoint = { wx: s.x, wy: s.y, scale: state.camera.scale };
+    } else if(s.type==='compass-arc'){
+      state.hotelPoint = { wx: s.ox, wy: s.oy, scale: state.camera.scale };
+    }
+    updateHotelBeacon();
+  }
+}
+function undo(){
+  const op = state.undoStack.pop();
+  if(!op) return;
+  state.redoStack.push({type:'stroke', stroke: state.strokes.pop()});
+  renderAll(); updateHUD();
+}
+function redo(){
+  const op = state.redoStack.pop();
+  if(!op || !op.stroke) return;
+  state.strokes.push(op.stroke);
+  state.undoStack.push({type:'stroke', count:1});
+  renderAll(); updateHUD();
+}
+document.addEventListener('keydown', e=>{
+  if(e.ctrlKey && e.key==='z'){e.preventDefault();undo();}
+  if(e.ctrlKey && (e.key==='y'||(e.shiftKey&&e.key==='Z'))){e.preventDefault();redo();}
+  if(e.key==='Escape'){
+    if(state.tool==='compass'){ state.compass.mode='set-origin'; state.compass.hasOrigin=false; state.compass.radius=0; state.isDrawing=false; state.currentPath=null; renderCompass(); }
+    document.getElementById('eqPanel').classList.remove('open');
+  }
+  const keys={p:'pen',e:'eraser',l:'line',r:'rect',c:'circle',a:'arrow',s:'select',t:'text'};
+  if(!e.ctrlKey && keys[e.key]){ setTool(keys[e.key]); }
+});
+
+// ─── Equation plotter ─────────────────────────────────────────────────────────
+function plotEquation(expr){
+  expr = expr.trim();
+  if(!expr) return;
+  // Handle y = ... or just f(x)
+  let fnExpr = expr.replace(/^y\s*=\s*/i,'');
+  let fn;
+  try{
+    const compiled = math.compile(fnExpr);
+    fn = (x) => compiled.evaluate({x});
+    fn(0); // test
+  }catch(err){
+    showTooltip(`Error: ${err.message}`, 200, 100);
+    return;
+  }
+  const colorIdx = state.equations.length % state.equationColors.length;
+  const color = state.equationColors[colorIdx];
+  const stroke = { type:'equation', color, width: 2, opacity:1, fn, expr, points:[] };
+  state.equations.push({expr, color});
+  pushStroke(stroke);
+  state.redoStack = [];
+  renderAll();
+  updateEqList();
+}
+
+function updateEqList(){
+  const el = document.getElementById('eqList');
+  if(state.equations.length === 0){ el.innerHTML='No functions plotted'; return; }
+  el.innerHTML = state.equations.map((eq,i)=>
+    `<div style="display:flex;align-items:center;gap:6px;">
+      <div style="width:10px;height:10px;border-radius:50%;background:${eq.color};flex-shrink:0;"></div>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;">${eq.expr}</span>
+    </div>`
+  ).join('');
+}
+
+// ─── Axes ─────────────────────────────────────────────────────────────────────
+function insertAxes(){
+  pushStroke({
+    type:'axes', color: state.color, width:1.5, opacity:state.opacity,
+    ox:0, oy:0, range:15, tickSize:0.5, points:[]
+  });
+  renderAll(); updateHUD();
+}
+
+// ─── Text tool ────────────────────────────────────────────────────────────────
+function showTextInput(sx, sy, wp){
+  if(state.textInput) state.textInput.remove();
+  const inp = document.createElement('input');
+  inp.style.cssText=`position:absolute;left:${sx}px;top:${sy}px;background:transparent;border:none;border-bottom:1px solid ${state.color};color:${state.color};font-family:JetBrains Mono,monospace;font-size:${Math.max(10, 18*state.camera.scale)}px;outline:none;min-width:80px;z-index:200;`;
+  inp.placeholder='Type...';
+  app.appendChild(inp);
+  inp.focus();
+  state.textInput = inp;
+  inp.addEventListener('blur',()=>{
+    const txt = inp.value.trim();
+    if(txt){
+      pushStroke({type:'text',color:state.color,opacity:state.opacity,text:txt,x:wp.x,y:wp.y,fontSize:18/state.camera.scale,points:[]});
+      renderAll(); updateHUD();
+    }
+    inp.remove(); state.textInput=null;
+  });
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key==='Escape') inp.blur(); });
+}
+
+// ─── HUD update ───────────────────────────────────────────────────────────────
+function updateHUD(){
+  document.getElementById('hud-tool').innerHTML = `Tool: <b>${state.tool}</b>`;
+  document.getElementById('hud-strokes').innerHTML = `Strokes: <b>${state.strokes.length}</b>`;
+}
+
+// ─── Tooltip ─────────────────────────────────────────────────────────────────
+function showTooltip(text, x, y){
+  const tt = document.getElementById('tooltip');
+  tt.textContent = text;
+  tt.style.left = x+'px'; tt.style.top = y+'px';
+  tt.style.display='block';
+  clearTimeout(tt._t);
+  tt._t = setTimeout(()=>tt.style.display='none', 2000);
+}
+
+// ─── Tool buttons ─────────────────────────────────────────────────────────────
+function setTool(tool){
+  // Toggle instruments off if already active
+  if(tool === 'ruler' && state.tool === 'ruler'){
+    state.ruler.visible = false;
+    renderRuler();
+    document.getElementById('rulerProps').style.display='none';
+    state.tool = 'pen';
+    document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelector('[data-tool="pen"]').classList.add('active');
+    mainCanvas.style.cursor = 'crosshair';
+    updateHUD(); return;
+  }
+  if(tool === 'compass' && state.tool === 'compass'){
+    state.compass.visible = false;
+    renderCompass();
+    document.getElementById('compassProps').style.display='none';
+    document.getElementById('compassInfo').style.display='none';
+    state.tool = 'pen';
+    document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelector('[data-tool="pen"]').classList.add('active');
+    mainCanvas.style.cursor = 'crosshair';
+    updateHUD(); return;
+  }
+  if(tool === 'protractor' && state.tool === 'protractor'){
+    state.protractor.visible = false;
+    renderProtractor();
+    state.tool = 'pen';
+    document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelector('[data-tool="pen"]').classList.add('active');
+    mainCanvas.style.cursor = 'crosshair';
+    updateHUD(); return;
+  }
+
+  state.tool = tool;
+  // Update cursor
+  const cursors = {pen:'crosshair',eraser:'crosshair',line:'crosshair',rect:'crosshair',circle:'crosshair',arrow:'crosshair',select:'grab',ruler:'default',compass:'crosshair',protractor:'crosshair',text:'text'};
+  mainCanvas.style.cursor = cursors[tool] || 'crosshair';
+  // Toggle instrument visibility
+  if(tool==='ruler'){ state.ruler.visible=true; renderRuler(); document.getElementById('rulerProps').style.display='flex'; }
+  else { state.ruler.visible=false; renderRuler(); document.getElementById('rulerProps').style.display='none'; }
+  if(tool==='eraser'){ document.getElementById('eraserProps').style.display='flex'; document.getElementById('rightPanel').classList.add('open'); }
+  else { document.getElementById('eraserProps').style.display='none'; }
+  if(tool==='compass'){ state.compass.visible=true; state.compass.hasOrigin=false; state.compass.radius=0; state.compass.mode='set-origin'; document.getElementById('compassModeBtn').textContent='Set Origin'; renderCompass(); document.getElementById('compassProps').style.display='flex'; document.getElementById('compassInfo').style.display='block'; }
+  else { state.compass.visible=false; renderCompass(); document.getElementById('compassProps').style.display='none'; document.getElementById('compassInfo').style.display='none'; }
+  if(tool==='protractor'){ state.protractor.visible=true; renderProtractor(); }
+  else { state.protractor.visible=false; renderProtractor(); }
+  // Update buttons
+  document.querySelectorAll('.tool-btn').forEach(b=>b.classList.remove('active'));
+  const activeBtn = document.querySelector(`[data-tool="${tool}"]`);
+  if(activeBtn) activeBtn.classList.add('active');
+  updateHUD();
+}
+
+document.querySelectorAll('[data-tool]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{ setTool(btn.dataset.tool); });
+});
+
+// ─── Toolbar buttons ──────────────────────────────────────────────────────────
+document.getElementById('btn-new').addEventListener('click',()=>{
+  if(!confirm('Clear canvas and start new?')) return;
+  state.strokes=[]; state.undoStack=[]; state.redoStack=[]; state.equations=[];
+  state.camera={x:0,y:0,scale:1};
+  updateHUD(); updateEqList(); renderAll();
+});
+document.getElementById('btn-undo').addEventListener('click', undo);
+document.getElementById('btn-redo').addEventListener('click', redo);
+document.getElementById('btn-clear').addEventListener('click',()=>{
+  if(!confirm('Clear all strokes?')) return;
+  state.redoStack=[...state.strokes.map(s=>({type:'stroke',stroke:s})),...state.redoStack];
+  state.strokes=[]; state.equations=[]; updateHUD(); updateEqList(); renderAll();
+});
+
+const gridBtn = document.getElementById('btn-grid');
+gridBtn.classList.add('active');
+gridBtn.addEventListener('click',()=>{
+  state.gridVisible = !state.gridVisible;
+  gridBtn.classList.toggle('active', state.gridVisible);
+  renderGrid();
+});
+
+const snapBtn = document.getElementById('btn-snap');
+snapBtn.addEventListener('click',()=>{
+  state.snapEnabled = !state.snapEnabled;
+  snapBtn.classList.toggle('active', state.snapEnabled);
+  showTooltip(`Snap ${state.snapEnabled?'ON — drawing locks to grid intersections':'OFF — freehand drawing'}`, 80, 80);
+});
+
+document.getElementById('btn-axes').addEventListener('click', insertAxes);
+
+document.getElementById('btn-eq').addEventListener('click',()=>{
+  document.getElementById('eqPanel').classList.toggle('open');
+  document.getElementById('eqProps').style.display='flex';
+  document.getElementById('rightPanel').classList.add('open');
+  setTimeout(()=>document.getElementById('eqInput').focus(), 50);
+});
+document.getElementById('btn-props').addEventListener('click',()=>{
+  document.getElementById('rightPanel').classList.toggle('open');
+});
+document.getElementById('rpClose').addEventListener('click',()=>{
+  document.getElementById('rightPanel').classList.remove('open');
+});
+
+// Equation plot
+document.getElementById('eqPlotBtn').addEventListener('click',()=>{
+  plotEquation(document.getElementById('eqInput').value);
+  document.getElementById('eqInput').value='';
+});
+document.getElementById('eqInput').addEventListener('keydown',e=>{
+  if(e.key==='Enter') plotEquation(document.getElementById('eqInput').value), document.getElementById('eqInput').value='';
+});
+document.getElementById('eqClose').addEventListener('click',()=>{
+  document.getElementById('eqPanel').classList.remove('open');
+});
+
+// Zoom controls
+document.getElementById('zoomIn').addEventListener('click',()=>{
+  state.camera.scale = Math.min(50, state.camera.scale * 1.25);
+  document.getElementById('coord-z').textContent = Math.round(state.camera.scale*100);
+  renderAll();
+});
+document.getElementById('zoomOut').addEventListener('click',()=>{
+  state.camera.scale = Math.max(0.05, state.camera.scale / 1.25);
+  document.getElementById('coord-z').textContent = Math.round(state.camera.scale*100);
+  renderAll();
+});
+document.getElementById('zoomFit').addEventListener('click',()=>{
+  state.camera = {x:0,y:0,scale:1};
+  document.getElementById('coord-z').textContent = 100;
+  renderAll();
+});
+document.getElementById('resetViewBtn').addEventListener('click',()=>{
+  state.camera={x:0,y:0,scale:1};
+  document.getElementById('coord-z').textContent=100;
+  renderAll();
+});
+
+// Ruler rotation
+document.getElementById('rotRulerL').addEventListener('click',()=>{
+  state.ruler.angle -= 15 * Math.PI/180;
+  document.getElementById('rulerAngleDisp').textContent = Math.round(state.ruler.angle * 180/Math.PI) + '°';
+  renderRuler();
+});
+document.getElementById('rotRulerR').addEventListener('click',()=>{
+  state.ruler.angle += 15 * Math.PI/180;
+  document.getElementById('rulerAngleDisp').textContent = Math.round(state.ruler.angle * 180/Math.PI) + '°';
+  renderRuler();
+});
+
+// Compass mode
+document.getElementById('compassModeBtn').addEventListener('click',()=>{
+  state.compass.hasOrigin=false; state.compass.radius=0; state.compass.mode='set-origin';
+  document.getElementById('compassModeBtn').textContent='Set Origin';
+  renderCompass();
+});
+
+// ─── Properties panel ─────────────────────────────────────────────────────────
+document.querySelectorAll('.color-swatch').forEach(sw=>{
+  sw.addEventListener('click',()=>{
+    state.color = sw.dataset.color;
+    document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));
+    sw.classList.add('active');
+  });
+});
+document.getElementById('strokeSlider').addEventListener('input',e=>{
+  state.strokeWidth = parseFloat(e.target.value);
+  document.getElementById('strokeVal').textContent = state.strokeWidth + 'px';
+});
+document.getElementById('opacitySlider').addEventListener('input',e=>{
+  state.opacity = parseInt(e.target.value)/100;
+  document.getElementById('opacityVal').textContent = e.target.value + '%';
+});
+document.getElementById('eraserStrokeBtn').addEventListener('click',()=>setEraserMode('stroke'));
+document.getElementById('eraserPixelBtn').addEventListener('click',()=>setEraserMode('pixel'));
+
+document.getElementById('smoothSlider').addEventListener('input',e=>{
+  state.smoothing = parseInt(e.target.value);
+  document.getElementById('smoothVal').textContent = e.target.value;
+});
+
+// ─── Export helpers ───────────────────────────────────────────────────────────
+function getContentBounds(){
+  let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+  for(const s of state.strokes){
+    if(!s.points) continue;
+    for(const p of s.points){
+      if(p.x<minX) minX=p.x; if(p.x>maxX) maxX=p.x;
+      if(p.y<minY) minY=p.y; if(p.y>maxY) maxY=p.y;
+    }
+    if(s.type==='compass-arc'){ const r=s.radius||0; if(s.ox-r<minX) minX=s.ox-r; if(s.ox+r>maxX) maxX=s.ox+r; if(s.oy-r<minY) minY=s.oy-r; if(s.oy+r>maxY) maxY=s.oy+r; }
+    if(s.type==='text'){ if(s.x<minX) minX=s.x; if(s.x>maxX) maxX=s.x; if(s.y<minY) minY=s.y; if(s.y>maxY) maxY=s.y; }
+  }
+  if(!isFinite(minX)){ minX=-400; maxX=400; minY=-300; maxY=300; }
+  return {minX, minY, maxX, maxY};
+}
+
+function renderToOffscreenCanvas(targetW, targetH, padding, bgColor){
+  const b = getContentBounds();
+  const contentW = (b.maxX - b.minX) || 800;
+  const contentH = (b.maxY - b.minY) || 600;
+  const scaleX = (targetW - padding*2) / contentW;
+  const scaleY = (targetH - padding*2) / contentH;
+  const scale = Math.min(scaleX, scaleY, 4); // cap at 4x for performance
+  const canvasW = Math.ceil(contentW * scale + padding*2);
+  const canvasH = Math.ceil(contentH * scale + padding*2);
+  const offCtx_canvas = document.createElement('canvas');
+  offCtx_canvas.width = canvasW;
+  offCtx_canvas.height = canvasH;
+  const ctx = offCtx_canvas.getContext('2d');
+  if(bgColor){ ctx.fillStyle = bgColor; ctx.fillRect(0,0,canvasW,canvasH); }
+  // Center the content
+  ctx.setTransform(scale, 0, 0, scale,
+    padding - b.minX * scale,
+    padding - b.minY * scale);
+  for(const stroke of state.strokes){ drawStroke(ctx, stroke); }
+  return offCtx_canvas;
+}
+
+// PNG — full content, high resolution
+document.getElementById('btn-export-png').addEventListener('click',()=>{
+  const b = getContentBounds();
+  const pad = 60;
+  const contentW = Math.max(b.maxX - b.minX, 100);
+  const contentH = Math.max(b.maxY - b.minY, 100);
+  const SCALE = Math.min(4, 3000 / Math.max(contentW, contentH)); // target ~3000px wide
+  const W = Math.ceil(contentW * SCALE + pad*2);
+  const H = Math.ceil(contentH * SCALE + pad*2);
+  const tmp = document.createElement('canvas');
+  tmp.width = W; tmp.height = H;
+  const ctx = tmp.getContext('2d');
+  ctx.fillStyle = '#030303';
+  ctx.fillRect(0,0,W,H);
+  // Draw grid on offscreen
+  const savedCam = {...state.camera};
+  state.camera = { x: (-b.minX + pad/SCALE) * SCALE - W/2, y: (-b.minY + pad/SCALE) * SCALE - H/2, scale: SCALE };
+  tmp.width = W; tmp.height = H; // reset
+  ctx.fillStyle = '#030303'; ctx.fillRect(0,0,W,H);
+  // Draw content with adjusted camera
+  ctx.save();
+  ctx.setTransform(SCALE, 0, 0, SCALE, pad - b.minX * SCALE, pad - b.minY * SCALE);
+  for(const stroke of state.strokes){ drawStroke(ctx, stroke); }
+  ctx.restore();
+  state.camera = savedCam;
+  const a = document.createElement('a');
+  a.href = tmp.toDataURL('image/png');
+  a.download = 'nexon-axiom.png';
+  a.click();
+  showTooltip(`Exported PNG — ${W}×${H}px`, 200, 80);
+});
+
+// SVG — preserve text and paths
+document.getElementById('btn-export-svg').addEventListener('click',()=>{
+  const b = getContentBounds();
+  const pad = 40;
+  const W = Math.max(b.maxX - b.minX, 100) + pad*2;
+  const H = Math.max(b.maxY - b.minY, 100) + pad*2;
+  const ox = -b.minX + pad, oy = -b.minY + pad;
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W.toFixed(1)}" height="${H.toFixed(1)}" viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}">`;
+  svg += `<rect width="100%" height="100%" fill="#030303"/>`;
+  for(const s of state.strokes){
+    if(s.type==='text'){
+      svg += `<text x="${(s.x+ox).toFixed(2)}" y="${(s.y+oy).toFixed(2)}" fill="${s.color}" opacity="${s.opacity||1}" font-size="${s.fontSize||18}" font-family="JetBrains Mono,monospace">${escSVG(s.text||'')}</text>`;
+    } else if(s.type==='pen' || s.type==='line'){
+      const pts = s.points;
+      if(!pts||pts.length<2) continue;
+      let d = `M ${(pts[0].x+ox).toFixed(2)} ${(pts[0].y+oy).toFixed(2)}`;
+      for(let i=1;i<pts.length;i++) d+=` L ${(pts[i].x+ox).toFixed(2)} ${(pts[i].y+oy).toFixed(2)}`;
+      svg += `<path d="${d}" stroke="${s.color}" stroke-width="${s.width}" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="${s.opacity||1}"/>`;
+    } else if(s.type==='rect'){
+      if(s.points.length<2) continue;
+      const a=s.points[0],bb2=s.points[s.points.length-1];
+      svg += `<rect x="${(Math.min(a.x,bb2.x)+ox).toFixed(2)}" y="${(Math.min(a.y,bb2.y)+oy).toFixed(2)}" width="${Math.abs(bb2.x-a.x).toFixed(2)}" height="${Math.abs(bb2.y-a.y).toFixed(2)}" stroke="${s.color}" stroke-width="${s.width}" fill="none" opacity="${s.opacity||1}"/>`;
+    } else if(s.type==='circle'){
+      if(s.points.length<2) continue;
+      const a=s.points[0],bb2=s.points[s.points.length-1];
+      const r=Math.hypot(bb2.x-a.x,bb2.y-a.y);
+      svg += `<circle cx="${(a.x+ox).toFixed(2)}" cy="${(a.y+oy).toFixed(2)}" r="${r.toFixed(2)}" stroke="${s.color}" stroke-width="${s.width}" fill="none" opacity="${s.opacity||1}"/>`;
+    } else if(s.type==='compass-arc'){
+      svg += `<circle cx="${(s.ox+ox).toFixed(2)}" cy="${(s.oy+oy).toFixed(2)}" r="${s.radius.toFixed(2)}" stroke="${s.color}" stroke-width="${s.width}" fill="none" opacity="${s.opacity||1}"/>`;
+    } else if(s.type==='arrow'){
+      if(s.points.length<2) continue;
+      const a=s.points[0],bb2=s.points[s.points.length-1];
+      const angle=Math.atan2(bb2.y-a.y,bb2.x-a.x);
+      const hw=Math.max(s.width*3,10);
+      const ax1=bb2.x-hw*Math.cos(angle-0.45), ay1=bb2.y-hw*Math.sin(angle-0.45);
+      const ax2=bb2.x-hw*Math.cos(angle+0.45), ay2=bb2.y-hw*Math.sin(angle+0.45);
+      svg += `<line x1="${(a.x+ox).toFixed(2)}" y1="${(a.y+oy).toFixed(2)}" x2="${(bb2.x+ox).toFixed(2)}" y2="${(bb2.y+oy).toFixed(2)}" stroke="${s.color}" stroke-width="${s.width}" opacity="${s.opacity||1}"/>`;
+      svg += `<polygon points="${(ax1+ox).toFixed(2)},${(ay1+oy).toFixed(2)} ${(bb2.x+ox).toFixed(2)},${(bb2.y+oy).toFixed(2)} ${(ax2+ox).toFixed(2)},${(ay2+oy).toFixed(2)}" fill="${s.color}" opacity="${s.opacity||1}"/>`;
+    }
+  }
+  svg += '</svg>';
+  const blob = new Blob([svg],{type:'image/svg+xml'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='nexon-axiom.svg'; a.click();
+  showTooltip(`Exported SVG — ${W.toFixed(0)}×${H.toFixed(0)} units`, 200, 80);
+});
+
+// PDF export — uses browser print dialog with canvas rendered at high res
+document.getElementById('btn-export-pdf').addEventListener('click',()=>{
+  const b = getContentBounds();
+  const pad = 60;
+  const contentW = Math.max(b.maxX - b.minX, 100);
+  const contentH = Math.max(b.maxY - b.minY, 100);
+  const SCALE = Math.min(4, 4000 / Math.max(contentW, contentH));
+  const W = Math.ceil(contentW * SCALE + pad*2);
+  const H = Math.ceil(contentH * SCALE + pad*2);
+  const tmp = document.createElement('canvas');
+  tmp.width = W; tmp.height = H;
+  const ctx = tmp.getContext('2d');
+  ctx.fillStyle = '#ffffff'; // white for print
+  ctx.fillRect(0,0,W,H);
+  ctx.save();
+  ctx.setTransform(SCALE, 0, 0, SCALE, pad - b.minX * SCALE, pad - b.minY * SCALE);
+  // Draw strokes in dark on white
+  for(const stroke of state.strokes){
+    const s = {...stroke};
+    if(s.color === '#FFFFFF' || s.color === 'rgba(255,255,255,0.7)') s.color = '#111111';
+    drawStroke(ctx, s);
+  }
+  ctx.restore();
+  const dataUrl = tmp.toDataURL('image/png', 1.0);
+  const win = window.open('');
+  win.document.write(`<!DOCTYPE html><html><head><title>NEXON Axiom Export</title>
+    <style>@page{margin:0;size:auto;}body{margin:0;background:#fff;}img{max-width:100%;display:block;}</style></head>
+    <body><img src="${dataUrl}" onload="window.print();"/></body></html>`);
+  win.document.close();
+  showTooltip('PDF — print dialog opened', 200, 80);
+});
+
+function escSVG(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+
+// ─── Animated camera fly-to ───────────────────────────────────────────────────
+function flyToWorld(wx, wy, targetScale, onDone){
+  // Smooth animated pan+zoom to a world coordinate
+  const duration = 500; // ms
+  const startTime = performance.now();
+  const startCam = { x: state.camera.x, y: state.camera.y, scale: state.camera.scale };
+  // Compute target camera: world point centered on screen
+  const W = mainCanvas.width, H = mainCanvas.height;
+  const endCam = {
+    x: -wx * targetScale,
+    y: -wy * targetScale,
+    scale: targetScale
+  };
+  function ease(t){ return t<0.5 ? 2*t*t : -1+(4-2*t)*t; }
+  function step(now){
+    const t = Math.min(1, (now - startTime) / duration);
+    const e = ease(t);
+    state.camera.x = startCam.x + (endCam.x - startCam.x) * e;
+    state.camera.y = startCam.y + (endCam.y - startCam.y) * e;
+    state.camera.scale = startCam.scale + (endCam.scale - startCam.scale) * e;
+    document.getElementById('coord-z').textContent = Math.round(state.camera.scale * 100);
+    renderAll();
+    if(t < 1){ requestAnimationFrame(step); }
+    else { if(onDone) onDone(); }
+  }
+  requestAnimationFrame(step);
+}
+
+// ─── Home / Hotel system ──────────────────────────────────────────────────────
+state.pickingHome = false;
+
+function updateHomeBeacon(){
+  const beacon = document.getElementById('homeBeacon');
+  const btn = document.getElementById('btn-go-home');
+  const addBtn = document.getElementById('btn-add-home');
+  if(!state.homePoint){ beacon.style.display='none'; btn.classList.remove('set'); addBtn.classList.remove('set'); return; }
+  const sc = worldToScreen(state.homePoint.wx, state.homePoint.wy);
+  const W = mainCanvas.width, H = mainCanvas.height;
+  const toolbarH = 52, panelW = 64;
+  // Only show beacon if on screen
+  if(sc.x > panelW && sc.x < W && sc.y > toolbarH && sc.y < H){
+    beacon.style.display = 'block';
+    beacon.style.left = sc.x + 'px';
+    beacon.style.top = sc.y + 'px';
+  } else {
+    beacon.style.display = 'none';
+  }
+  btn.classList.add('set');
+  addBtn.classList.add('set');
+}
+
+function updateHotelBeacon(){
+  const beacon = document.getElementById('hotelBeacon');
+  const btn = document.getElementById('btn-hotel');
+  if(!state.hotelEnabled || !state.hotelPoint){ beacon.style.display='none'; return; }
+  const sc = worldToScreen(state.hotelPoint.wx, state.hotelPoint.wy);
+  const W = mainCanvas.width, H = mainCanvas.height;
+  const toolbarH = 52, panelW = 64;
+  if(sc.x > panelW && sc.x < W && sc.y > toolbarH && sc.y < H){
+    beacon.style.display = 'block';
+    beacon.style.left = sc.x + 'px';
+    beacon.style.top = sc.y + 'px';
+  } else {
+    beacon.style.display = 'none';
+  }
+}
+
+
+// Add Home: enter pick mode, next canvas click sets the home point
+document.getElementById('btn-add-home').addEventListener('click', ()=>{
+  state.pickingHome = true;
+  document.getElementById('homePickMsg').style.display = 'block';
+  document.getElementById('homePanel').classList.add('picking-home');
+  mainCanvas.style.cursor = 'crosshair';
+  showTooltip('Click anywhere on canvas to pin your Home point', mainCanvas.width/2 - 160, 70);
+});
+
+// Go Home: fly to saved home point
+document.getElementById('btn-go-home').addEventListener('click', ()=>{
+  if(!state.homePoint){
+    showTooltip('No Home set — use "Add Home" first', mainCanvas.width/2 - 120, 70);
+    return;
+  }
+  flyToWorld(state.homePoint.wx, state.homePoint.wy, state.homePoint.scale);
+  showTooltip('Flying home…', mainCanvas.width/2 - 50, 70);
+});
+
+// Hotel toggle: enable/disable auto-tracking
+document.getElementById('btn-hotel').addEventListener('click', ()=>{
+  state.hotelEnabled = !state.hotelEnabled;
+  const btn = document.getElementById('btn-hotel');
+  const goBtn = document.getElementById('btn-go-hotel');
+  if(state.hotelEnabled){
+    btn.classList.add('hotel-on');
+    btn.title = 'Hotel ON — tracking latest stroke. Click to disable.';
+    goBtn.classList.add('active');
+    showTooltip('Hotel ON — auto-tracks your latest stroke', mainCanvas.width/2 - 140, 70);
+    // Seed hotel point from the most recent stroke right now
+    if(state.strokes.length > 0){
+      const last = state.strokes[state.strokes.length-1];
+      const pts = last.points;
+      if(pts && pts.length > 0){
+        state.hotelPoint = { wx: pts[pts.length-1].x, wy: pts[pts.length-1].y, scale: state.camera.scale };
+      } else if(last.type==='text'){
+        state.hotelPoint = { wx: last.x, wy: last.y, scale: state.camera.scale };
+      } else if(last.type==='compass-arc'){
+        state.hotelPoint = { wx: last.ox, wy: last.oy, scale: state.camera.scale };
+      }
+    }
+  } else {
+    btn.classList.remove('hotel-on');
+    btn.title = 'Hotel: auto-tracks your latest brush stroke. Click to teleport there.';
+    goBtn.classList.remove('active');
+    state.hotelPoint = null;
+    showTooltip('Hotel OFF', mainCanvas.width/2 - 50, 70);
+  }
+  document.getElementById('hotelBeacon').style.display = 'none';
+  updateHotelBeacon();
+});
+
+// Go Hotel: fly to latest tracked stroke position
+document.getElementById('btn-go-hotel').addEventListener('click', ()=>{
+  if(!state.hotelEnabled){
+    showTooltip('Enable Hotel first by clicking the Hotel button', mainCanvas.width/2 - 160, 70);
+    return;
+  }
+  if(!state.hotelPoint){
+    showTooltip('No strokes drawn yet — draw something first', mainCanvas.width/2 - 140, 70);
+    return;
+  }
+  flyToWorld(state.hotelPoint.wx, state.hotelPoint.wy, state.hotelPoint.scale);
+  showTooltip('Flying to latest stroke…', mainCanvas.width/2 - 80, 70);
+});
+
+// Intercept canvas clicks for home-pick mode
+mainCanvas.addEventListener('pointerdown', function homePickInterceptor(e){
+  if(!state.pickingHome) return;
+  if(e.button !== 0) return;
+  e.stopImmediatePropagation();
+  const {sx, sy} = getEventPos(e);
+  const wp = screenToWorld(sx, sy);
+  state.homePoint = { wx: wp.x, wy: wp.y, scale: state.camera.scale };
+  state.pickingHome = false;
+  document.getElementById('homePickMsg').style.display = 'none';
+  document.getElementById('homePanel').classList.remove('picking-home');
+  mainCanvas.style.cursor = 'crosshair';
+  updateHomeBeacon();
+  showTooltip(`Home set at (${wp.x.toFixed(1)}, ${(-wp.y).toFixed(1)})`, sx - 80, sy - 40);
+}, true); // capture phase so it fires before drawing
+
+// ESC cancels home-pick mode
+document.addEventListener('keydown', function hotelEscListener(e){
+  if(e.key === 'Escape' && state.pickingHome){
+    state.pickingHome = false;
+    document.getElementById('homePickMsg').style.display = 'none';
+    document.getElementById('homePanel').classList.remove('picking-home');
+  }
+}, true);
+
+// ─── .NXM Save / Load ────────────────────────────────────────────────────────
+// .nxm = NEXON Math file — JSON with a header, version, and full canvas state
+const NXM_VERSION = 1;
+
+function serializeState(){
+  // Strokes: equation strokes store the expression string, not the fn (not serializable)
+  const strokes = state.strokes.map(s => {
+    if(s.type === 'equation'){
+      const { fn, ...rest } = s;
+      return { ...rest, _fnExpr: rest.expr ? rest.expr.replace(/^y\s*=\s*/i,'') : '' };
+    }
+    return { ...s };
+  });
+  return {
+    _format: 'nexon-math',
+    _version: NXM_VERSION,
+    _saved: new Date().toISOString(),
+    camera: { ...state.camera },
+    color: state.color,
+    strokeWidth: state.strokeWidth,
+    opacity: state.opacity,
+    smoothing: state.smoothing,
+    gridVisible: state.gridVisible,
+    snapEnabled: state.snapEnabled,
+    gridSize: state.gridSize,
+    eraserMode: state.eraserMode,
+    homePoint: state.homePoint,
+    hotelEnabled: state.hotelEnabled,
+    equations: state.equations,
+    strokes,
+  };
+}
+
+function deserializeState(data){
+  if(data._format !== 'nexon-math'){
+    alert('This does not look like a valid .nxm file.');
+    return;
+  }
+  // Restore camera & settings
+  state.camera = { ...data.camera };
+  state.color = data.color || '#FFFFFF';
+  state.strokeWidth = data.strokeWidth || 2;
+  state.opacity = data.opacity !== undefined ? data.opacity : 1;
+  state.smoothing = data.smoothing !== undefined ? data.smoothing : 4;
+  state.gridVisible = data.gridVisible !== false;
+  state.snapEnabled = !!data.snapEnabled;
+  state.gridSize = data.gridSize || 40;
+  state.eraserMode = data.eraserMode || 'stroke';
+  state.homePoint = data.homePoint || null;
+  state.hotelEnabled = !!data.hotelEnabled;
+  state.equations = data.equations || [];
+  state.hotelPoint = null; // reset hotel; will re-seed from strokes if hotel enabled
+
+  // Restore strokes — recompile equation fns
+  state.strokes = (data.strokes || []).map(s => {
+    if(s.type === 'equation'){
+      const expr = s._fnExpr || (s.expr ? s.expr.replace(/^y\s*=\s*/i,'') : '');
+      let fn = null;
+      try {
+        const compiled = math.compile(expr);
+        fn = x => compiled.evaluate({ x });
+        fn(0); // validate
+      } catch(e){ fn = () => NaN; }
+      const { _fnExpr, ...rest } = s;
+      return { ...rest, fn };
+    }
+    return { ...s };
+  });
+
+  state.undoStack = [];
+  state.redoStack = [];
+
+  // Sync UI controls to loaded state
+  document.getElementById('coord-z').textContent = Math.round(state.camera.scale * 100);
+  document.querySelectorAll('.color-swatch').forEach(sw => {
+    sw.classList.toggle('active', sw.dataset.color === state.color);
+  });
+  const strokeSlider = document.getElementById('strokeSlider');
+  strokeSlider.value = state.strokeWidth;
+  document.getElementById('strokeVal').textContent = state.strokeWidth + 'px';
+  const opacSlider = document.getElementById('opacitySlider');
+  opacSlider.value = Math.round(state.opacity * 100);
+  document.getElementById('opacityVal').textContent = Math.round(state.opacity * 100) + '%';
+  const smoothSlider = document.getElementById('smoothSlider');
+  smoothSlider.value = state.smoothing;
+  document.getElementById('smoothVal').textContent = state.smoothing;
+  document.getElementById('btn-grid').classList.toggle('active', state.gridVisible);
+  document.getElementById('btn-snap').classList.toggle('active', state.snapEnabled);
+
+  // Hotel button state
+  const hotelBtn = document.getElementById('btn-hotel');
+  const goHotelBtn = document.getElementById('btn-go-hotel');
+  if(state.hotelEnabled){
+    hotelBtn.classList.add('hotel-on');
+    goHotelBtn.classList.add('active');
+    // Seed hotel from last stroke
+    if(state.strokes.length > 0){
+      const last = state.strokes[state.strokes.length-1];
+      const pts = last.points;
+      if(pts && pts.length > 0) state.hotelPoint = { wx: pts[pts.length-1].x, wy: pts[pts.length-1].y, scale: state.camera.scale };
+    }
+  } else {
+    hotelBtn.classList.remove('hotel-on');
+    goHotelBtn.classList.remove('active');
+  }
+
+  updateEqList();
+  updateHUD();
+  renderAll();
+}
+
+// Save
+document.getElementById('btn-save').addEventListener('click', () => {
+  const data = serializeState();
+  const json = JSON.stringify(data);
+  const blob = new Blob([json], { type: 'application/octet-stream' });
+  const ts = new Date().toISOString().slice(0,19).replace(/[T:]/g,'-');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `nexon-axiom-${ts}.nxm`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showTooltip(`Saved — ${state.strokes.length} strokes, ${state.equations.length} equations`, mainCanvas.width/2 - 160, 70);
+});
+
+// Open
+document.getElementById('btn-open').addEventListener('click', () => {
+  document.getElementById('openFileInput').click();
+});
+document.getElementById('openFileInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      deserializeState(data);
+      showTooltip(`Loaded — ${state.strokes.length} strokes restored`, mainCanvas.width/2 - 130, 70);
+    } catch(err) {
+      alert('Could not read file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = ''; // reset so same file can be reopened
+});
+
+
+function drawDemoContent(){
+  // Insert axes
+  pushStroke({type:'axes',color:'rgba(255,255,255,0.6)',width:1.5,opacity:0.8,ox:0,oy:0,range:12,tickSize:0.5,points:[]});
+  // Plot a parabola
+  const compiled = math.compile('x^2 - 3');
+  pushStroke({type:'equation',color:'#D4AF37',width:2,opacity:1,fn:x=>compiled.evaluate({x}),expr:'y = x² − 3',points:[]});
+  // Plot sin
+  const sin = math.compile('4*sin(x)');
+  pushStroke({type:'equation',color:'#22C55E',width:2,opacity:1,fn:x=>sin.evaluate({x}),expr:'y = 4·sin(x)',points:[]});
+  state.equations.push({expr:'y = x² − 3',color:'#D4AF37'},{expr:'y = 4·sin(x)',color:'#22C55E'});
+  updateEqList();
+  updateHUD();
+}
+
+// Open props panel and run demo
+document.getElementById('rightPanel').classList.add('open');
+setTimeout(()=>{ drawDemoContent(); renderAll(); }, 300);
+
+})();
+</script>
+</body>
+</html>
