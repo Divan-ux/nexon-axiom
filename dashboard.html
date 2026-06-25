@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXON Axiom — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&family=Playfair+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg-void:#030303;
+  --glass-surface:rgba(18,18,18,0.92);
+  --glass-card:rgba(14,14,14,0.96);
+  --glass-border:rgba(212,175,55,0.15);
+  --glass-border-hover:rgba(212,175,55,0.35);
+  --gold-pure:#D4AF37;
+  --gold-dim:#8a6e1a;
+  --gold-glow:rgba(212,175,55,0.08);
+  --ink-white:#FFFFFF;
+  --ink-gray:#888888;
+  --ink-muted:#444444;
+  --ink-emerald:#22C55E;
+  --ink-crimson:#EF4444;
+  --ink-blue:#60a5fa;
+  --font-ui:'Space Grotesk',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+  --font-display:'Playfair Display',serif;
+  --toolbar-h:52px;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-void);font-family:var(--font-ui);color:var(--ink-white);}
+
+/* ── Ambient grid background ── */
+#bg-grid{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(212,175,55,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212,175,55,0.03) 1px, transparent 1px);
+  background-size:48px 48px;
+}
+#bg-radial{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 70% 60% at 50% 40%, rgba(212,175,55,0.04) 0%, transparent 70%);
+}
+
+/* ── Toolbar ── */
+#toolbar{
+  position:fixed;top:0;left:0;right:0;height:var(--toolbar-h);
+  background:var(--glass-surface);
+  border-bottom:0.5px solid var(--glass-border);
+  backdrop-filter:blur(20px);
+  display:flex;align-items:center;gap:0;
+  z-index:100;user-select:none;
+}
+.tb-brand{
+  padding:0 24px;font-size:13px;font-weight:600;letter-spacing:0.12em;
+  color:var(--gold-pure);text-transform:uppercase;white-space:nowrap;
+  border-right:0.5px solid var(--glass-border);height:100%;display:flex;align-items:center;gap:10px;
+  font-family:var(--font-mono);
+}
+.tb-brand-dot{width:6px;height:6px;border-radius:50%;background:var(--gold-pure);animation:pulse 2.5s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.7);}}
+.tb-brand span{color:rgba(255,255,255,0.3);font-weight:300;}
+.tb-nav{display:flex;align-items:center;height:100%;padding:0 8px;}
+.tb-nav-item{
+  padding:0 16px;height:100%;display:flex;align-items:center;
+  font-size:12px;font-family:var(--font-mono);letter-spacing:0.08em;
+  color:var(--ink-gray);cursor:pointer;text-transform:uppercase;
+  border-right:0.5px solid var(--glass-border);transition:color 0.15s;
+  text-decoration:none;
+}
+.tb-nav-item:hover{color:var(--ink-white);}
+.tb-nav-item.active{color:var(--gold-pure);}
+.tb-right{margin-left:auto;display:flex;align-items:center;height:100%;border-left:0.5px solid var(--glass-border);}
+.tb-clock{
+  padding:0 20px;font-family:var(--font-mono);font-size:11px;color:var(--ink-gray);
+  display:flex;flex-direction:column;align-items:flex-end;gap:1px;
+}
+.tb-clock .time{color:var(--gold-pure);font-size:13px;font-weight:500;}
+.tb-clock .date{font-size:10px;letter-spacing:0.05em;}
+
+/* ── Main layout ── */
+#app{
+  position:fixed;inset:0;top:var(--toolbar-h);z-index:1;
+  display:flex;overflow:hidden;
+}
+
+/* ── Sidebar ── */
+#sidebar{
+  width:240px;flex-shrink:0;
+  background:var(--glass-card);
+  border-right:0.5px solid var(--glass-border);
+  display:flex;flex-direction:column;
+  padding:24px 0;
+  overflow-y:auto;
+}
+.sb-section-label{
+  padding:0 20px 8px;
+  font-size:9px;font-family:var(--font-mono);letter-spacing:0.14em;
+  color:var(--ink-muted);text-transform:uppercase;
+}
+.sb-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 20px;cursor:pointer;
+  font-size:13px;color:var(--ink-gray);
+  transition:all 0.15s;text-decoration:none;
+  border-left:2px solid transparent;
+}
+.sb-item:hover{color:var(--ink-white);background:var(--gold-glow);}
+.sb-item.active{color:var(--gold-pure);border-left-color:var(--gold-pure);background:var(--gold-glow);}
+.sb-item svg{width:15px;height:15px;stroke-width:1.5;flex-shrink:0;}
+.sb-divider{height:0.5px;background:var(--glass-border);margin:12px 16px;}
+.sb-new-btn{
+  margin:12px 16px 0;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px;border-radius:8px;
+  background:rgba(212,175,55,0.12);
+  border:0.5px solid rgba(212,175,55,0.35);
+  color:var(--gold-pure);font-size:12px;font-family:var(--font-mono);
+  letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;
+  transition:all 0.2s;text-decoration:none;
+}
+.sb-new-btn:hover{background:rgba(212,175,55,0.22);border-color:rgba(212,175,55,0.6);}
+.sb-new-btn svg{width:14px;height:14px;stroke-width:2;}
+
+/* ── Main content ── */
+#main{
+  flex:1;overflow-y:auto;padding:32px 36px;
+  display:flex;flex-direction:column;gap:32px;
+}
+
+/* ── Hero section ── */
+.hero-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding-bottom:24px;border-bottom:0.5px solid var(--glass-border);
+}
+.hero-left{}
+.hero-eyebrow{
+  font-size:10px;font-family:var(--font-mono);letter-spacing:0.14em;
+  color:var(--gold-pure);text-transform:uppercase;margin-bottom:6px;
+}
+.hero-title{
+  font-family:var(--font-display);font-size:28px;font-weight:400;
+  color:var(--ink-white);line-height:1.1;
+  font-style:italic;
+}
+.hero-title b{font-style:normal;font-weight:700;color:var(--gold-pure);}
+.hero-sub{
+  margin-top:6px;font-size:12px;color:var(--ink-gray);
+  font-family:var(--font-mono);letter-spacing:0.04em;
+}
+.hero-stats{
+  display:flex;gap:24px;
+}
+.stat-block{
+  display:flex;flex-direction:column;align-items:flex-end;gap:2px;
+  padding:10px 16px;border-left:0.5px solid var(--glass-border);
+}
+.stat-val{font-size:22px;font-weight:600;color:var(--gold-pure);font-family:var(--font-mono);}
+.stat-lbl{font-size:9px;font-family:var(--font-mono);letter-spacing:0.1em;color:var(--ink-muted);text-transform:uppercase;}
+
+/* ── New Board CTA ── */
+.new-board-card{
+  display:flex;align-items:center;gap:20px;
+  padding:20px 24px;border-radius:10px;
+  background:rgba(212,175,55,0.06);
+  border:0.5px dashed rgba(212,175,55,0.3);
+  cursor:pointer;transition:all 0.2s;text-decoration:none;
+}
+.new-board-card:hover{background:rgba(212,175,55,0.1);border-color:rgba(212,175,55,0.55);transform:translateY(-1px);}
+.nbc-icon{
+  width:48px;height:48px;border-radius:10px;
+  background:rgba(212,175,55,0.12);border:0.5px solid rgba(212,175,55,0.3);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.nbc-icon svg{width:22px;height:22px;stroke:var(--gold-pure);stroke-width:1.5;}
+.nbc-text{}
+.nbc-title{font-size:15px;font-weight:600;color:var(--ink-white);margin-bottom:3px;}
+.nbc-sub{font-size:11px;color:var(--ink-gray);font-family:var(--font-mono);}
+.nbc-arrow{margin-left:auto;color:var(--gold-dim);}
+.nbc-arrow svg{width:18px;height:18px;stroke-width:1.5;}
+
+/* ── Section headers ── */
+.section-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:14px;
+}
+.section-title{
+  font-size:11px;font-family:var(--font-mono);letter-spacing:0.12em;
+  color:var(--gold-pure);text-transform:uppercase;
+}
+.section-action{
+  font-size:10px;font-family:var(--font-mono);letter-spacing:0.08em;
+  color:var(--ink-muted);text-transform:uppercase;cursor:pointer;transition:color 0.15s;
+  background:none;border:none;
+}
+.section-action:hover{color:var(--ink-white);}
+
+/* ── File grid ── */
+.file-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;
+}
+.file-card{
+  background:var(--glass-card);
+  border:0.5px solid var(--glass-border);
+  border-radius:10px;cursor:pointer;
+  transition:all 0.2s;overflow:hidden;
+  display:flex;flex-direction:column;
+  position:relative;
+}
+.file-card:hover{border-color:var(--glass-border-hover);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,0.4);}
+.file-card:hover .fc-preview{opacity:1;}
+.fc-preview{
+  height:110px;position:relative;overflow:hidden;
+  background:radial-gradient(circle at 50% 60%, rgba(212,175,55,0.06), transparent 70%);
+  opacity:0.85;transition:opacity 0.2s;
+  display:flex;align-items:center;justify-content:center;
+}
+.fc-canvas-preview{width:100%;height:100%;}
+.fc-body{padding:12px 14px 14px;}
+.fc-name{
+  font-size:12px;font-weight:600;color:var(--ink-white);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;
+}
+.fc-meta{
+  display:flex;gap:10px;align-items:center;
+}
+.fc-date{font-size:10px;font-family:var(--font-mono);color:var(--ink-muted);}
+.fc-size{font-size:10px;font-family:var(--font-mono);color:var(--ink-muted);}
+.fc-badge{
+  font-size:8px;font-family:var(--font-mono);letter-spacing:0.08em;
+  padding:2px 6px;border-radius:3px;text-transform:uppercase;
+  background:rgba(212,175,55,0.12);color:var(--gold-dim);border:0.5px solid rgba(212,175,55,0.2);
+}
+.fc-actions{
+  position:absolute;top:8px;right:8px;
+  display:flex;gap:4px;opacity:0;transition:opacity 0.15s;
+}
+.file-card:hover .fc-actions{opacity:1;}
+.fc-action-btn{
+  width:26px;height:26px;border-radius:5px;
+  background:rgba(14,14,14,0.9);border:0.5px solid var(--glass-border);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all 0.15s;color:var(--ink-gray);
+}
+.fc-action-btn:hover{border-color:var(--glass-border-hover);color:var(--ink-white);}
+.fc-action-btn svg{width:12px;height:12px;stroke-width:2;}
+.fc-action-btn.del:hover{border-color:rgba(239,68,68,0.4);color:var(--ink-crimson);}
+
+/* Empty state */
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:48px 24px;gap:12px;border:0.5px dashed var(--glass-border);
+  border-radius:10px;
+}
+.empty-icon{color:var(--ink-muted);}
+.empty-icon svg{width:32px;height:32px;stroke-width:1;}
+.empty-title{font-size:13px;color:var(--ink-gray);font-family:var(--font-mono);}
+.empty-sub{font-size:11px;color:var(--ink-muted);font-family:var(--font-mono);text-align:center;}
+
+/* ── Drop zone overlay ── */
+#dropZone{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(3,3,3,0.88);backdrop-filter:blur(8px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  border:2px dashed rgba(212,175,55,0.5);
+  pointer-events:none;opacity:0;transition:opacity 0.2s;
+}
+#dropZone.active{opacity:1;pointer-events:all;}
+.dz-icon svg{width:48px;height:48px;stroke:var(--gold-pure);stroke-width:1;}
+.dz-title{font-size:18px;font-weight:600;color:var(--gold-pure);font-family:var(--font-mono);}
+.dz-sub{font-size:12px;color:var(--ink-gray);font-family:var(--font-mono);}
+
+/* Hidden file input */
+#openFileInput{display:none;}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(212,175,55,0.15);border-radius:2px;}
+::-webkit-scrollbar-thumb:hover{background:rgba(212,175,55,0.3);}
+
+/* ── Toast ── */
+#toast{
+  position:fixed;bottom:24px;right:24px;z-index:300;
+  background:var(--glass-surface);border:0.5px solid var(--glass-border);
+  border-radius:8px;padding:10px 16px;backdrop-filter:blur(20px);
+  font-size:11px;font-family:var(--font-mono);color:var(--ink-white);
+  transform:translateY(12px);opacity:0;
+  transition:all 0.25s cubic-bezier(.4,0,.2,1);pointer-events:none;
+}
+#toast.show{transform:translateY(0);opacity:1;}
+#toast.ok::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ink-emerald);margin-right:8px;}
+#toast.err::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ink-crimson);margin-right:8px;}
+</style>
+</head>
+<body>
+
+<div id="bg-grid"></div>
+<div id="bg-radial"></div>
+
+<!-- Toolbar -->
+<div id="toolbar">
+  <div class="tb-brand">
+    <div class="tb-brand-dot"></div>
+    NEXON <span>&nbsp;/&nbsp;</span> Axiom
+  </div>
+  <nav class="tb-nav">
+    <a class="tb-nav-item active" href="dashboard.html">Dashboard</a>
+    <a class="tb-nav-item" href="index.html">Whiteboard</a>
+  </nav>
+  <div class="tb-right">
+    <div class="tb-clock">
+      <div class="time" id="clockTime">--:--:--</div>
+      <div class="date" id="clockDate">---</div>
+    </div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <a class="sb-new-btn" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New Board
+    </a>
+    <div class="sb-divider"></div>
+    <div class="sb-section-label">Library</div>
+    <div class="sb-item active" data-filter="all">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      All Boards
+    </div>
+    <div class="sb-item" data-filter="recent">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+      Recent
+    </div>
+    <div class="sb-item" data-filter="starred">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      Starred
+    </div>
+    <div class="sb-divider"></div>
+    <div class="sb-section-label">Import</div>
+    <div class="sb-item" id="importBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Open .nxm File
+    </div>
+    <div class="sb-divider"></div>
+    <div class="sb-section-label">Session</div>
+    <div class="sb-item" id="clearAllBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      Clear Library
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main id="main">
+
+    <!-- Hero -->
+    <div class="hero-row">
+      <div class="hero-left">
+        <div class="hero-eyebrow">NEXON Axiom — Math Workspace</div>
+        <div class="hero-title">Your <b>Boards</b></div>
+        <div class="hero-sub" id="heroSub">Loading library...</div>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-block">
+          <div class="stat-val" id="statBoards">0</div>
+          <div class="stat-lbl">Boards</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-val" id="statStrokes">0</div>
+          <div class="stat-lbl">Strokes</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-val" id="statEqs">0</div>
+          <div class="stat-lbl">Equations</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- New Board CTA -->
+    <a class="new-board-card" href="index.html">
+      <div class="nbc-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </div>
+      <div class="nbc-text">
+        <div class="nbc-title">Create New Board</div>
+        <div class="nbc-sub">Open a blank infinite canvas in NEXON Axiom</div>
+      </div>
+      <div class="nbc-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </div>
+    </a>
+
+    <!-- Recent files -->
+    <div>
+      <div class="section-header">
+        <div class="section-title">Recent Boards</div>
+        <button class="section-action" id="importBtn2">+ Import .nxm</button>
+      </div>
+      <div class="file-grid" id="fileGrid">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Drop zone -->
+<div id="dropZone">
+  <div class="dz-icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+  </div>
+  <div class="dz-title">Drop .nxm file to import</div>
+  <div class="dz-sub">NEXON Math Board file</div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Hidden file input -->
+<input type="file" id="openFileInput" accept=".nxm">
+
+<script>
+// ── Clock ─────────────────────────────────────────────────────────
+(function clock(){
+  const t = document.getElementById('clockTime');
+  const d = document.getElementById('clockDate');
+  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function tick(){
+    const n = new Date();
+    t.textContent = n.toTimeString().slice(0,8);
+    d.textContent = `${DAYS[n.getDay()]} ${n.getDate()} ${MONTHS[n.getMonth()]} ${n.getFullYear()}`;
+  }
+  tick(); setInterval(tick, 1000);
+})();
+
+// ── Toast ─────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type='ok'){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ el.className=''; }, 3000);
+}
+
+// ── Storage: IndexedDB for persistent on-disk storage ─────────────
+// Uses IndexedDB (persistent across sessions, not wiped like localStorage)
+// Each entry: { id, name, savedAt, strokes, equations, sizeBytes, starred, data }
+
+const DB_NAME = 'nexon_axiom';
+const DB_VERSION = 1;
+const STORE = 'library';
+let _db = null;
+
+function openDB(){
+  return new Promise((resolve, reject)=>{
+    if(_db){ resolve(_db); return; }
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains(STORE)){
+        const store = db.createObjectStore(STORE, { keyPath:'id' });
+        store.createIndex('savedAt','savedAt',{unique:false});
+      }
+    };
+    req.onsuccess = e => { _db = e.target.result; resolve(_db); };
+    req.onerror = e => reject(e.target.error);
+  });
+}
+
+async function getLibrary(){
+  try{
+    const db = await openDB();
+    return new Promise((resolve, reject)=>{
+      const tx = db.transaction(STORE,'readonly');
+      const req = tx.objectStore(STORE).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+    });
+  } catch(e){ return []; }
+}
+
+async function saveLibrary(lib){
+  try{
+    const db = await openDB();
+    const tx = db.transaction(STORE,'readwrite');
+    const store = tx.objectStore(STORE);
+    // Clear and re-write all entries
+    await new Promise((res,rej)=>{ const r=store.clear(); r.onsuccess=res; r.onerror=rej; });
+    for(const entry of lib){
+      await new Promise((res,rej)=>{ const r=store.put(entry); r.onsuccess=res; r.onerror=rej; });
+    }
+  } catch(e){ console.error('DB save error:', e); }
+}
+
+async function addBoardToLibrary(entry){
+  try{
+    const db = await openDB();
+    return new Promise((resolve,reject)=>{
+      const tx = db.transaction(STORE,'readwrite');
+      const req = tx.objectStore(STORE).put(entry);
+      req.onsuccess = resolve;
+      req.onerror = reject;
+    });
+  } catch(e){ console.error('DB add error:', e); }
+}
+
+async function deleteBoardFromLibrary(id){
+  try{
+    const db = await openDB();
+    return new Promise((resolve,reject)=>{
+      const tx = db.transaction(STORE,'readwrite');
+      const req = tx.objectStore(STORE).delete(id);
+      req.onsuccess = resolve;
+      req.onerror = reject;
+    });
+  } catch(e){ console.error('DB delete error:', e); }
+}
+
+// ── Stats ─────────────────────────────────────────────────────────
+function updateStats(lib){
+  document.getElementById('statBoards').textContent = lib.length;
+  const totalStrokes = lib.reduce((a,b)=>(b.strokes||0)+a, 0);
+  const totalEqs = lib.reduce((a,b)=>(b.equations||0)+a, 0);
+  document.getElementById('statStrokes').textContent = totalStrokes;
+  document.getElementById('statEqs').textContent = totalEqs;
+  const sub = lib.length === 0
+    ? 'No boards yet — create your first below'
+    : `${lib.length} board${lib.length===1?'':'s'} · ${totalStrokes} strokes · ${totalEqs} equations`;
+  document.getElementById('heroSub').textContent = sub;
+}
+
+// ── Sidebar filter ────────────────────────────────────────────────
+let activeFilter = 'all';
+document.querySelectorAll('.sb-item[data-filter]').forEach(item=>{
+  item.addEventListener('click', ()=>{
+    document.querySelectorAll('.sb-item[data-filter]').forEach(i=>i.classList.remove('active'));
+    item.classList.add('active');
+    activeFilter = item.dataset.filter;
+    renderGrid();
+  });
+});
+
+// ── Canvas preview ─────────────────────────────────────────────────
+function drawPreview(canvas, data){
+  if(!canvas || !data) return;
+  const W = canvas.width = canvas.offsetWidth || 200;
+  const H = canvas.height = canvas.offsetHeight || 110;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  // Dark background
+  ctx.fillStyle = '#0a0a0a';
+  ctx.fillRect(0,0,W,H);
+
+  // Subtle grid
+  ctx.strokeStyle = 'rgba(212,175,55,0.06)';
+  ctx.lineWidth = 0.5;
+  const gs = 12;
+  for(let x=0; x<W; x+=gs){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke(); }
+  for(let y=0; y<H; y+=gs){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke(); }
+
+  if(!data.strokes || data.strokes.length === 0){
+    ctx.fillStyle = 'rgba(212,175,55,0.08)';
+    ctx.font = '10px JetBrains Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Empty board', W/2, H/2);
+    return;
+  }
+
+  // Find bounding box of all stroke points
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  data.strokes.forEach(s=>{
+    if(s.points && s.points.length){
+      s.points.forEach(p=>{
+        minX=Math.min(minX,p.x); maxX=Math.max(maxX,p.x);
+        minY=Math.min(minY,p.y); maxY=Math.max(maxY,p.y);
+      });
+    }
+    if(s.type==='equation'){
+      // approximate bound
+      for(let wx=-10;wx<=10;wx+=0.5){
+        minX=Math.min(minX,wx); maxX=Math.max(maxX,wx);
+        minY=Math.min(minY,-5); maxY=Math.max(maxY,5);
+      }
+    }
+  });
+
+  const pad = 16;
+  const bW = maxX - minX || 20;
+  const bH = maxY - minY || 20;
+  const scaleX = (W - pad*2) / bW;
+  const scaleY = (H - pad*2) / bH;
+  const scale = Math.min(scaleX, scaleY) * 0.85;
+  const cx = W/2 - (minX + bW/2)*scale;
+  const cy = H/2 - (minY + bH/2)*scale;
+
+  function toS(wx,wy){ return { x: wx*scale+cx, y: wy*scale+cy }; }
+
+  // Draw strokes
+  data.strokes.forEach(s=>{
+    if(s.type === 'equation'){
+      ctx.beginPath();
+      ctx.strokeStyle = s.color || '#D4AF37';
+      ctx.lineWidth = Math.max(0.8, (s.width||2)*0.4);
+      ctx.globalAlpha = s.opacity || 0.8;
+      let started = false;
+      for(let wx=-12;wx<=12;wx+=0.08){
+        // We can't re-compile the fn; render stored points if available, else skip
+        if(s.points && s.points.length){
+          break; // handled below
+        }
+      }
+      // If equation has points sampled, draw them
+      if(s.points && s.points.length){
+        s.points.forEach((p,i)=>{
+          const sp = toS(p.x, p.y);
+          if(i===0) ctx.moveTo(sp.x,sp.y);
+          else ctx.lineTo(sp.x,sp.y);
+        });
+        ctx.stroke();
+      } else {
+        // fallback: just draw a small sine wave
+        ctx.beginPath();
+        for(let px=0;px<W;px+=2){
+          const py = H/2 + Math.sin((px/W)*Math.PI*4)*12;
+          if(px===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+        }
+        ctx.stroke();
+      }
+    } else if(s.points && s.points.length > 1){
+      ctx.beginPath();
+      ctx.strokeStyle = s.color || '#ffffff';
+      ctx.lineWidth = Math.max(0.5, (s.width||2)*0.4);
+      ctx.globalAlpha = s.opacity || 1;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      s.points.forEach((p,i)=>{
+        const sp = toS(p.x, p.y);
+        if(i===0) ctx.moveTo(sp.x,sp.y);
+        else ctx.lineTo(sp.x,sp.y);
+      });
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  });
+}
+
+// ── Render file grid ──────────────────────────────────────────────
+async function renderGrid(){
+  let lib = await getLibrary();
+  // Sort all by date descending first
+  lib = [...lib].sort((a,b)=>new Date(b.savedAt)-new Date(a.savedAt));
+  if(activeFilter === 'recent') lib = lib.slice(0,8);
+  if(activeFilter === 'starred') lib = lib.filter(b=>b.starred);
+
+  const grid = document.getElementById('fileGrid');
+  grid.innerHTML = '';
+  updateStats(await getLibrary());
+
+  if(lib.length === 0){
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1">
+        <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg></div>
+        <div class="empty-title">${activeFilter==='starred' ? 'No starred boards' : 'No boards yet'}</div>
+        <div class="empty-sub">${activeFilter==='starred' ? 'Star a board to pin it here' : 'Create a new board or import a .nxm file'}</div>
+      </div>`;
+    return;
+  }
+
+  lib.forEach(board=>{
+    const card = document.createElement('div');
+    card.className = 'file-card';
+    card.innerHTML = `
+      <div class="fc-preview">
+        <canvas class="fc-canvas-preview"></canvas>
+      </div>
+      <div class="fc-actions">
+        <div class="fc-action-btn star-btn" title="${board.starred?'Unstar':'Star'}">
+          <svg viewBox="0 0 24 24" fill="${board.starred?'#D4AF37':'none'}" stroke="${board.starred?'#D4AF37':'currentColor'}"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <div class="fc-action-btn download-btn" title="Export .nxm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </div>
+        <div class="fc-action-btn del" title="Delete">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </div>
+      </div>
+      <div class="fc-body">
+        <div class="fc-name">${escHtml(board.name)}</div>
+        <div class="fc-meta">
+          <span class="fc-date">${formatDate(board.savedAt)}</span>
+          <span class="fc-badge">${board.strokes||0}s · ${board.equations||0}eq</span>
+        </div>
+      </div>`;
+
+    // Draw preview
+    const cvs = card.querySelector('.fc-canvas-preview');
+    requestAnimationFrame(()=>{
+      cvs.width = cvs.offsetWidth || 200;
+      cvs.height = cvs.offsetHeight || 110;
+      drawPreview(cvs, board.data);
+    });
+
+    // Open on card click (not on action buttons)
+    card.addEventListener('click', e=>{
+      if(e.target.closest('.fc-action-btn')) return;
+      openBoard(board);
+    });
+
+    // Star
+    card.querySelector('.star-btn').addEventListener('click', e=>{
+      e.stopPropagation();
+      toggleStar(board.id);
+    });
+
+    // Download
+    card.querySelector('.download-btn').addEventListener('click', e=>{
+      e.stopPropagation();
+      downloadBoard(board);
+    });
+
+    // Delete
+    card.querySelector('.del').addEventListener('click', e=>{
+      e.stopPropagation();
+      deleteBoard(board.id, board.name);
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+// ── Open board: store in sessionStorage then go to whiteboard ─────
+function openBoard(board){
+  try{
+    sessionStorage.setItem('axiom_open_board', JSON.stringify(board.data));
+    window.location.href = 'index.html';
+  } catch(e){
+    toast('File too large to open via session — try importing directly in Whiteboard', 'err');
+  }
+}
+
+// ── Toggle star ───────────────────────────────────────────────────
+async function toggleStar(id){
+  const lib = await getLibrary();
+  const b = lib.find(x=>x.id===id);
+  if(!b) return;
+  b.starred = !b.starred;
+  await saveLibrary(lib);
+  renderGrid();
+  toast(b.starred ? 'Starred' : 'Unstarred');
+}
+
+// ── Download .nxm ─────────────────────────────────────────────────
+function downloadBoard(board){
+  const json = JSON.stringify(board.data);
+  const blob = new Blob([json], {type:'application/octet-stream'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = board.name.endsWith('.nxm') ? board.name : board.name + '.nxm';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Exported ' + board.name);
+}
+
+// ── Delete board ──────────────────────────────────────────────────
+async function deleteBoard(id, name){
+  if(!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+  await deleteBoardFromLibrary(id);
+  renderGrid();
+  toast('Deleted ' + name);
+}
+
+// ── Import .nxm file ──────────────────────────────────────────────
+async function importNxm(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async ev=>{
+    try{
+      const data = JSON.parse(ev.target.result);
+      if(data._format !== 'nexon-math') throw new Error('Not a valid .nxm file');
+      const lib = await getLibrary();
+      const id = 'board_' + Date.now();
+      const name = file.name.replace(/\.nxm$/i,'');
+      const entry = {
+        id, name,
+        savedAt: data._saved || new Date().toISOString(),
+        strokes: (data.strokes||[]).length,
+        equations: (data.equations||[]).length,
+        starred: false,
+        data,
+      };
+      // Don't add duplicates (check by _saved timestamp)
+      if(lib.find(b=>b.data && b.data._saved === data._saved)){
+        toast('Board already in library', 'err');
+        return;
+      }
+      lib.unshift(entry);
+      await saveLibrary(lib);
+      renderGrid();
+      toast('Imported: ' + name);
+    } catch(e){
+      toast('Could not read file: ' + e.message, 'err');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ── File input ────────────────────────────────────────────────────
+const fileInput = document.getElementById('openFileInput');
+fileInput.addEventListener('change', e=>{
+  importNxm(e.target.files[0]);
+  e.target.value = '';
+});
+document.getElementById('importBtn').addEventListener('click', ()=>fileInput.click());
+document.getElementById('importBtn2').addEventListener('click', ()=>fileInput.click());
+
+// ── Clear library ─────────────────────────────────────────────────
+document.getElementById('clearAllBtn').addEventListener('click', async ()=>{
+  const lib = await getLibrary();
+  if(lib.length === 0){ toast('Library is already empty'); return; }
+  if(!confirm(`Delete all ${lib.length} board(s)? This cannot be undone.`)) return;
+  await saveLibrary([]);
+  renderGrid();
+  toast('Library cleared');
+});
+
+// ── Drag-and-drop ─────────────────────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+document.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classList.add('active'); });
+document.addEventListener('dragleave', e=>{ if(!e.relatedTarget) dropZone.classList.remove('active'); });
+document.addEventListener('drop', e=>{
+  e.preventDefault();
+  dropZone.classList.remove('active');
+  const file = [...e.dataTransfer.files].find(f=>f.name.endsWith('.nxm'));
+  if(file) importNxm(file);
+  else toast('Please drop a .nxm file', 'err');
+});
+
+// ── Helpers ───────────────────────────────────────────────────────
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function formatDate(iso){
+  if(!iso) return '—';
+  const d = new Date(iso);
+  if(isNaN(d)) return '—';
+  const now = new Date();
+  const diff = (now - d) / 1000;
+  if(diff < 60) return 'just now';
+  if(diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if(diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  if(diff < 604800) return Math.floor(diff/86400) + 'd ago';
+  return d.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+// Migrate any existing localStorage data to IndexedDB (one-time)
+(async function migrate(){
+  try{
+    const raw = localStorage.getItem('axiom_library');
+    if(!raw) return;
+    const old = JSON.parse(raw);
+    if(!old || !old.length) return;
+    const db = await openDB();
+    const existing = await getLibrary();
+    if(existing.length > 0) { localStorage.removeItem('axiom_library'); return; } // already migrated
+    for(const entry of old){
+      await addBoardToLibrary(entry);
+    }
+    localStorage.removeItem('axiom_library');
+    console.log('Migrated', old.length, 'boards from localStorage to IndexedDB');
+  } catch(e){}
+})().then(()=>renderGrid());
+</script>
+
+<!-- Intercept saves coming back from Whiteboard via sessionStorage -->
+<script>
+// If whiteboard saved a board to sessionStorage under 'axiom_save_board',
+// import it into the library automatically
+(async function checkIncomingSave(){
+  const raw = sessionStorage.getItem('axiom_save_board');
+  if(!raw) return;
+  sessionStorage.removeItem('axiom_save_board');
+  try{
+    const data = JSON.parse(raw);
+    if(data._format !== 'nexon-math') return;
+    const lib = await getLibrary();
+    const ts = data._saved || new Date().toISOString();
+    const d = new Date(ts);
+    const name = `Board ${d.toLocaleDateString('en-ZA',{day:'2-digit',month:'short'})} ${d.toTimeString().slice(0,5)}`;
+    // Check if already exists (by _saved timestamp)
+    if(lib.find(b=>b.data && b.data._saved === data._saved)) return;
+    const entry = {
+      id:'board_'+Date.now(), name,
+      savedAt: ts,
+      strokes:(data.strokes||[]).length,
+      equations:(data.equations||[]).length,
+      starred:false,
+      data,
+    };
+    lib.unshift(entry);
+    await saveLibrary(lib);
+    renderGrid();
+    toast('Board saved to library');
+  } catch(e){}
+})();
+</script>
+
+</body>
+</html>
