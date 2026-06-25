@@ -30,8 +30,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-void);font-
 #app{width:100vw;height:100vh;position:relative;overflow:hidden;}
 
 /* ── Canvas ── */
-#mainCanvas{display:block;position:absolute;inset:0;cursor:crosshair;touch-action:none;}
-#gridCanvas{display:block;position:absolute;inset:0;pointer-events:none;}
+#mainCanvas{display:block;position:absolute;inset:0;cursor:crosshair;touch-action:none;z-index:1;}
+#gridCanvas{display:block;position:absolute;inset:0;pointer-events:none;z-index:0;}
 
 /* ── Toolbar ── */
 #toolbar{
@@ -133,32 +133,101 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-void);font-
 .rp-btn.primary{border-color:rgba(212,175,55,0.4);color:var(--gold-pure);}
 .rp-btn.primary:hover{background:rgba(212,175,55,0.12);}
 
-/* ── Equation Panel ── */
-#eqPanel{
-  position:absolute;bottom:24px;left:50%;transform:translateX(-50%);
-  background:var(--glass-surface);border:0.5px solid var(--glass-border);
-  border-radius:12px;backdrop-filter:blur(24px);
-  padding:12px 16px;display:flex;gap:10px;align-items:center;
-  z-index:95;min-width:360px;
-  display:none;
+/* ── Upgraded Desmos-like Equation Panel ── */
+#eqPanel {
+  position: absolute; 
+  bottom: 24px; 
+  left: calc(var(--panel-width) + 24px);
+  background: var(--glass-surface); 
+  border: 0.5px solid var(--glass-border);
+  border-radius: 12px; 
+  backdrop-filter: blur(24px); 
+  -webkit-backdrop-filter: blur(24px);
+  padding: 16px; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 12px;
+  z-index: 95; 
+  width: 340px; 
+  max-height: 420px;
+  display: none; 
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
 }
-#eqPanel.open{display:flex;}
-#eqInput{
-  flex:1;background:rgba(255,255,255,0.05);border:0.5px solid var(--glass-border);
-  border-radius:6px;padding:8px 12px;color:var(--ink-white);font-family:var(--font-mono);
-  font-size:13px;outline:none;
+#eqPanel.open { display: flex; }
+.eq-list {
+  display: flex; 
+  flex-direction: column; 
+  gap: 8px; 
+  overflow-y: auto; 
+  max-height: 290px; 
+  padding-right: 4px;
 }
-#eqInput:focus{border-color:rgba(212,175,55,0.4);}
-#eqInput::placeholder{color:var(--ink-gray);}
-.eq-plot-btn{
-  padding:8px 16px;border-radius:6px;background:rgba(212,175,55,0.15);
-  border:0.5px solid rgba(212,175,55,0.4);color:var(--gold-pure);
-  font-family:var(--font-mono);font-size:11px;cursor:pointer;
-  text-transform:uppercase;letter-spacing:0.08em;transition:all 0.15s;white-space:nowrap;
+.eq-row {
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  background: rgba(255, 255, 255, 0.03); 
+  border: 0.5px solid var(--glass-border); 
+  border-radius: 6px; 
+  padding: 6px 10px;
+  transition: border-color 0.15s;
 }
-.eq-plot-btn:hover{background:rgba(212,175,55,0.25);}
-.eq-close-btn{background:none;border:none;cursor:pointer;color:var(--ink-gray);padding:4px;}
-.eq-close-btn:hover{color:var(--ink-white);}
+.eq-row:focus-within {
+  border-color: rgba(212, 175, 55, 0.4);
+}
+.eq-color-dot {
+  width: 10px; 
+  height: 10px; 
+  border-radius: 50%; 
+  flex-shrink: 0;
+}
+.eq-input-field {
+  flex: 1; 
+  background: transparent; 
+  border: none; 
+  outline: none; 
+  color: var(--ink-white); 
+  font-family: var(--font-mono); 
+  font-size: 13px;
+}
+.eq-input-field::placeholder { color: var(--ink-gray); }
+.eq-delete-btn {
+  background: none; 
+  border: none; 
+  color: var(--ink-gray); 
+  cursor: pointer; 
+  font-size: 13px; 
+  display: flex; 
+  align-items: center;
+  padding: 2px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+.eq-delete-btn:hover { 
+  color: var(--ink-crimson); 
+  background: rgba(239, 68, 68, 0.1); 
+}
+.eq-add-btn {
+  width: 100%; 
+  padding: 10px; 
+  background: rgba(212, 175, 55, 0.08); 
+  border: 0.5px solid rgba(212, 175, 55, 0.3);
+  border-radius: 6px; 
+  color: var(--gold-pure); 
+  font-family: var(--font-ui); 
+  font-size: 11px; 
+  font-weight: 600;
+  cursor: pointer; 
+  text-transform: uppercase; 
+  letter-spacing: 0.08em; 
+  transition: all 0.15s;
+}
+.eq-add-btn:hover { 
+  background: rgba(212, 175, 55, 0.18); 
+  border-color: var(--gold-pure);
+}
+.eq-close-btn { background: none; border: none; cursor: pointer; color: var(--ink-gray); }
+.eq-close-btn:hover { color: var(--ink-white); }
 
 /* ── Instrument Overlays ── */
 #rulerOverlay,#compassOverlay,#protractorOverlay{
@@ -282,6 +351,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-void);font-
   70%{box-shadow:0 0 0 10px rgba(34,197,94,0);}
   100%{box-shadow:0 0 0 0 rgba(34,197,94,0);}
 }
+@keyframes pulse-brand{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.7);}}
 </style>
 </head>
 <body>
@@ -298,7 +368,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-void);font-
 
   <!-- Top toolbar -->
   <div id="toolbar">
-    <div class="tb-brand">NEXON<span>&nbsp;/&nbsp;</span>AXIOM</div>
+    <div class="tb-brand" style="gap:10px;">
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--gold-pure);animation:pulse-brand 2.5s ease-in-out infinite;flex-shrink:0;"></div>
+      NEXON<span>&nbsp;/&nbsp;</span>AXIOM
+    </div>
+    <a href="dashboard.html" style="padding:0 16px;height:100%;display:flex;align-items:center;font-size:11px;font-family:var(--font-mono);letter-spacing:0.08em;color:var(--ink-gray);text-transform:uppercase;text-decoration:none;border-right:0.5px solid var(--glass-border);transition:color 0.15s;" onmouseover="this.style.color='var(--ink-white)'" onmouseout="this.style.color='var(--ink-gray)'">
+      ← Dashboard
+    </a>
     <!-- File ops -->
     <div class="tb-section">
       <button class="tb-btn" id="btn-new" title="New Canvas">
@@ -488,11 +564,17 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-void);font-
     </div>
   </div>
 
-  <!-- Equation panel -->
   <div id="eqPanel">
-    <input id="eqInput" type="text" placeholder="y = x^2 + 2x − 1  or  sin(x)/x" spellcheck="false"/>
-    <button class="eq-plot-btn" id="eqPlotBtn">Plot</button>
-    <button class="eq-close-btn" id="eqClose">✕</button>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+      <span style="font-size: 10px; font-family: var(--font-mono); color: var(--gold-pure); letter-spacing: 0.1em; text-transform: uppercase;">Expressions Matrix</span>
+      <button class="eq-close-btn" id="closeEqPanelBtn" title="Close Panel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="14" height="14" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    
+    <div class="eq-list" id="eqListContainer"></div>
+    
+    <button class="eq-add-btn" id="addExpressionBtn">+ Add Expression</button>
   </div>
 
   <!-- Compass info -->
@@ -1059,6 +1141,8 @@ function getEventPos(e){
 }
 
 function onPointerDown(e){
+  // If a UI element above the canvas was the actual target, ignore
+  if(e.target !== mainCanvas) return;
   e.preventDefault();
   mainCanvas.setPointerCapture(e.pointerId);
   const {sx, sy} = getEventPos(e);
@@ -1466,14 +1550,35 @@ function plotEquation(expr){
 }
 
 function updateEqList(){
-  const el = document.getElementById('eqList');
-  if(state.equations.length === 0){ el.innerHTML='No functions plotted'; return; }
-  el.innerHTML = state.equations.map((eq,i)=>
-    `<div style="display:flex;align-items:center;gap:6px;">
-      <div style="width:10px;height:10px;border-radius:50%;background:${eq.color};flex-shrink:0;"></div>
-      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;">${eq.expr}</span>
-    </div>`
-  ).join('');
+  // The eqListContainer is the Desmos-style live panel; sync state.equations into it
+  // (used when loading a saved file — rebuild rows from state.equations)
+  const container = document.getElementById('eqListContainer');
+  container.innerHTML = '';
+  state.equations.forEach(eq => {
+    const row = document.createElement('div');
+    row.className = 'eq-row';
+    row.dataset.expr = eq.expr;
+    row.dataset.plotted = eq.expr;
+    row.innerHTML = `
+      <div class="eq-color-dot" style="background:${eq.color}"></div>
+      <input class="eq-input-field" type="text" value="${eq.expr}" spellcheck="false"/>
+      <button class="eq-delete-btn" title="Remove">✕</button>`;
+    const input = row.querySelector('.eq-input-field');
+    const delBtn = row.querySelector('.eq-delete-btn');
+    input.addEventListener('keydown', e=>{
+      if(e.key==='Enter') plotEquationRow(input.value.trim(), eq.color, row);
+    });
+    input.addEventListener('blur', ()=>{
+      const v = input.value.trim();
+      if(v && row.dataset.plotted !== v) plotEquationRow(v, eq.color, row);
+    });
+    delBtn.addEventListener('click', ()=>{
+      state.strokes = state.strokes.filter(s => !(s.type==='equation' && s.expr===row.dataset.expr));
+      state.equations = state.equations.filter(e => e.expr !== row.dataset.expr);
+      row.remove(); renderAll(); updateHUD();
+    });
+    container.appendChild(row);
+  });
 }
 
 // ─── Axes ─────────────────────────────────────────────────────────────────────
@@ -1515,6 +1620,10 @@ function updateHUD(){
 function showTooltip(text, x, y){
   const tt = document.getElementById('tooltip');
   tt.textContent = text;
+  // Clamp to screen so tooltip is always visible
+  const tw = Math.min(400, text.length * 7 + 20);
+  x = Math.max(4, Math.min((mainCanvas.width || window.innerWidth) - tw - 4, x));
+  y = Math.max(60, y);
   tt.style.left = x+'px'; tt.style.top = y+'px';
   tt.style.display='block';
   clearTimeout(tt._t);
@@ -1612,10 +1721,14 @@ snapBtn.addEventListener('click',()=>{
 document.getElementById('btn-axes').addEventListener('click', insertAxes);
 
 document.getElementById('btn-eq').addEventListener('click',()=>{
-  document.getElementById('eqPanel').classList.toggle('open');
-  document.getElementById('eqProps').style.display='flex';
-  document.getElementById('rightPanel').classList.add('open');
-  setTimeout(()=>document.getElementById('eqInput').focus(), 50);
+  const panel = document.getElementById('eqPanel');
+  panel.classList.toggle('open');
+  // Auto-add first row if panel is now open and empty
+  if(panel.classList.contains('open')){
+    const container = document.getElementById('eqListContainer');
+    if(container.children.length === 0) addEqRow('');
+    else container.querySelector('.eq-input-field').focus();
+  }
 });
 document.getElementById('btn-props').addEventListener('click',()=>{
   document.getElementById('rightPanel').classList.toggle('open');
@@ -1624,17 +1737,86 @@ document.getElementById('rpClose').addEventListener('click',()=>{
   document.getElementById('rightPanel').classList.remove('open');
 });
 
-// Equation plot
-document.getElementById('eqPlotBtn').addEventListener('click',()=>{
-  plotEquation(document.getElementById('eqInput').value);
-  document.getElementById('eqInput').value='';
-});
-document.getElementById('eqInput').addEventListener('keydown',e=>{
-  if(e.key==='Enter') plotEquation(document.getElementById('eqInput').value), document.getElementById('eqInput').value='';
-});
-document.getElementById('eqClose').addEventListener('click',()=>{
+// ── Desmos-style Equation Panel ──────────────────────────────────
+// Wire close button
+document.getElementById('closeEqPanelBtn').addEventListener('click',()=>{
   document.getElementById('eqPanel').classList.remove('open');
 });
+
+// Add expression row
+document.getElementById('addExpressionBtn').addEventListener('click',()=>{
+  addEqRow('');
+});
+
+function addEqRow(expr){
+  const container = document.getElementById('eqListContainer');
+  const colorIdx = container.children.length % state.equationColors.length;
+  const color = state.equationColors[colorIdx];
+  const row = document.createElement('div');
+  row.className = 'eq-row';
+  row.innerHTML = `
+    <div class="eq-color-dot" style="background:${color}"></div>
+    <input class="eq-input-field" type="text" placeholder="y = x^2" value="${expr}" spellcheck="false"/>
+    <button class="eq-delete-btn" title="Remove">✕</button>`;
+  const input = row.querySelector('.eq-input-field');
+  const delBtn = row.querySelector('.eq-delete-btn');
+
+  // Plot on Enter
+  input.addEventListener('keydown', e=>{
+    if(e.key === 'Enter'){
+      const v = input.value.trim();
+      if(v) plotEquationRow(v, color, row);
+    }
+  });
+  // Plot on blur (leaving field)
+  input.addEventListener('blur', ()=>{
+    const v = input.value.trim();
+    if(v && !row.dataset.plotted) plotEquationRow(v, color, row);
+  });
+  // Delete row
+  delBtn.addEventListener('click', ()=>{
+    // Remove associated equation stroke
+    if(row.dataset.expr){
+      state.strokes = state.strokes.filter(s => !(s.type==='equation' && s.expr===row.dataset.expr));
+      state.equations = state.equations.filter(e => e.expr !== row.dataset.expr);
+      renderAll(); updateHUD();
+    }
+    row.remove();
+  });
+
+  container.appendChild(row);
+  input.focus();
+}
+
+function plotEquationRow(expr, color, row){
+  expr = expr.trim();
+  if(!expr) return;
+  // If row already plotted this expr, skip re-plot
+  if(row.dataset.plotted === expr) return;
+  // Remove old stroke for this row if re-plotting
+  if(row.dataset.expr){
+    state.strokes = state.strokes.filter(s => !(s.type==='equation' && s.expr===row.dataset.expr));
+    state.equations = state.equations.filter(e => e.expr !== row.dataset.expr);
+  }
+  let fnExpr = expr.replace(/^y\s*=\s*/i,'');
+  let fn;
+  try{
+    const compiled = math.compile(fnExpr);
+    fn = x => compiled.evaluate({x});
+    fn(0); // validate
+  } catch(err){
+    showTooltip('Error: ' + err.message, 80, 80);
+    return;
+  }
+  const stroke = { type:'equation', color, width:2, opacity:1, fn, expr, points:[] };
+  state.equations.push({expr, color});
+  pushStroke(stroke);
+  state.redoStack = [];
+  row.dataset.expr = expr;
+  row.dataset.plotted = expr;
+  renderAll(); updateHUD();
+  showTooltip('Plotted: ' + expr, 80, 80);
+}
 
 // Zoom controls
 document.getElementById('zoomIn').addEventListener('click',()=>{
@@ -1935,7 +2117,7 @@ document.getElementById('btn-go-home').addEventListener('click', ()=>{
     showTooltip('No Home set — use "Add Home" first', mainCanvas.width/2 - 120, 70);
     return;
   }
-  flyToWorld(state.homePoint.wx, state.homePoint.wy, state.homePoint.scale);
+  flyToWorld(state.homePoint.wx, state.homePoint.wy, Math.max(0.5, state.homePoint.scale));
   showTooltip('Flying home…', mainCanvas.width/2 - 50, 70);
 });
 
@@ -1982,7 +2164,7 @@ document.getElementById('btn-go-hotel').addEventListener('click', ()=>{
     showTooltip('No strokes drawn yet — draw something first', mainCanvas.width/2 - 140, 70);
     return;
   }
-  flyToWorld(state.hotelPoint.wx, state.hotelPoint.wy, state.hotelPoint.scale);
+  flyToWorld(state.hotelPoint.wx, state.hotelPoint.wy, Math.max(0.5, state.hotelPoint.scale));
   showTooltip('Flying to latest stroke…', mainCanvas.width/2 - 80, 70);
 });
 
@@ -1990,6 +2172,7 @@ document.getElementById('btn-go-hotel').addEventListener('click', ()=>{
 mainCanvas.addEventListener('pointerdown', function homePickInterceptor(e){
   if(!state.pickingHome) return;
   if(e.button !== 0) return;
+  if(e.target !== mainCanvas) return;
   e.stopImmediatePropagation();
   const {sx, sy} = getEventPos(e);
   const wp = screenToWorld(sx, sy);
@@ -2126,6 +2309,7 @@ function deserializeState(data){
 document.getElementById('btn-save').addEventListener('click', () => {
   const data = serializeState();
   const json = JSON.stringify(data);
+  // ── Download .nxm file ──
   const blob = new Blob([json], { type: 'application/octet-stream' });
   const ts = new Date().toISOString().slice(0,19).replace(/[T:]/g,'-');
   const a = document.createElement('a');
@@ -2133,6 +2317,8 @@ document.getElementById('btn-save').addEventListener('click', () => {
   a.download = `nexon-axiom-${ts}.nxm`;
   a.click();
   URL.revokeObjectURL(a.href);
+  // ── Also push to dashboard library via sessionStorage ──
+  try { sessionStorage.setItem('axiom_save_board', json); } catch(e){}
   showTooltip(`Saved — ${state.strokes.length} strokes, ${state.equations.length} equations`, mainCanvas.width/2 - 160, 70);
 });
 
@@ -2172,9 +2358,24 @@ function drawDemoContent(){
   updateHUD();
 }
 
-// Open props panel and run demo
+// Open props panel; load board from dashboard if present, else run demo
 document.getElementById('rightPanel').classList.add('open');
-setTimeout(()=>{ drawDemoContent(); renderAll(); }, 300);
+setTimeout(()=>{
+  // Check if dashboard sent a board to open
+  try {
+    const raw = sessionStorage.getItem('axiom_open_board');
+    if(raw){
+      sessionStorage.removeItem('axiom_open_board');
+      const data = JSON.parse(raw);
+      deserializeState(data);
+      showTooltip(`Loaded — ${state.strokes.length} strokes restored`, mainCanvas.width/2 - 130, 70);
+      return;
+    }
+  } catch(e){}
+  // No incoming board — draw demo content
+  drawDemoContent();
+  renderAll();
+}, 300);
 
 })();
 </script>
